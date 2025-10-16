@@ -147,10 +147,10 @@ const Auth = () => {
             <CardTitle className="text-2xl">{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
             <CardDescription>
               {isLogin 
-                ? `Sign in as ${userType === "mechanic" ? "Mechanic" : "Customer"}`
+                ? `Sign in as ${userType === "mechanic" ? "Mechanic" : "Admin"}`
                 : userType === "mechanic" 
                   ? "Mechanic accounts are created by administrators"
-                  : "Sign up for a customer account"}
+                  : "Sign up for an admin account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -158,7 +158,7 @@ const Auth = () => {
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="customer" className="flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Customer
+                  Admin
                 </TabsTrigger>
                 <TabsTrigger value="mechanic" className="flex items-center gap-2">
                   <Wrench className="h-4 w-4" />
@@ -198,7 +198,7 @@ const Auth = () => {
 
             {userType === "customer" && !isLogin && (
               <p className="text-xs text-muted-foreground text-center mt-2">
-                By signing up, you'll be able to book appointments and track your service history.
+                By signing up, you'll have admin access to manage appointments and mechanics.
               </p>
             )}
 
