@@ -146,7 +146,11 @@ const Auth = () => {
             <img src={rlLogo} alt="R&L Auto Repair" className="h-16 mx-auto" />
             <CardTitle className="text-2xl">{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
             <CardDescription>
-              {isLogin ? "Sign in to your account" : "Sign up for a customer account"}
+              {isLogin 
+                ? `Sign in as ${userType === "mechanic" ? "Mechanic" : "Customer"}`
+                : userType === "mechanic" 
+                  ? "Mechanic accounts are created by administrators"
+                  : "Sign up for a customer account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
