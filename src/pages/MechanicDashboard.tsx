@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Calendar, Car, Clock, Mail, Phone, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,21 +27,14 @@ type Appointment = {
   street_address?: string;
   city?: string;
   state?: string;
-  assigned_mechanic_id?: string;
   notes?: string;
 };
 
-type Mechanic = {
-  id: string;
-  email: string;
-};
-
-const AdminDashboard = () => {
+const MechanicDashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isMechanic, setIsMechanic] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -57,66 +51,42 @@ const AdminDashboard = () => {
 
     setUser(session.user);
 
-    // Check if user has admin role
+    // Check if user has mechanic role
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", session.user.id)
-      .eq("role", "admin")
+      .eq("role", "mechanic")
       .maybeSingle();
 
     if (!roleData) {
       toast({
         title: "Access Denied",
-        description: "You don't have admin permissions.",
+        description: "You don't have mechanic permissions.",
         variant: "destructive"
       });
       navigate("/");
       return;
     }
 
-    setIsAdmin(true);
-    fetchAppointments();
-    fetchMechanics();
+    setIsMechanic(true);
+    fetchAssignedJobs(session.user.id);
   };
 
-  const fetchAppointments = async () => {
+  const fetchAssignedJobs = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from("appointments")
         .select("*")
+        .eq("assigned_mechanic_id", userId)
         .order("appointment_date", { ascending: true });
 
       if (error) throw error;
       setAppointments(data || []);
     } catch (error) {
-      console.error("Error fetching appointments:", error);
+      console.error("Error fetching jobs:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchMechanics = async () => {
-    try {
-      const { data: mechanicRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "mechanic");
-
-      if (mechanicRoles && mechanicRoles.length > 0) {
-        const mechanicIds = mechanicRoles.map(r => r.user_id);
-        const mechanics: Mechanic[] = [];
-        
-        for (const id of mechanicIds) {
-          const { data } = await supabase.auth.admin.getUserById(id);
-          if (data.user) {
-            mechanics.push({ id: data.user.id, email: data.user.email || "" });
-          }
-        }
-        setMechanics(mechanics);
-      }
-    } catch (error) {
-      console.error("Error fetching mechanics:", error);
     }
   };
 
@@ -134,36 +104,20 @@ const AdminDashboard = () => {
       );
 
       toast({ title: "Status Updated", description: `Job status changed to ${newStatus}` });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
 
-  const assignMechanic = async (appointmentId: string, mechanicId: string) => {
-    try {
-      const { error } = await supabase
-        .from("appointments")
-        .update({ 
-          assigned_mechanic_id: mechanicId,
-          job_status: "approved"
-        })
-        .eq("id", appointmentId);
-
-      if (error) throw error;
-
-      setAppointments(prev =>
-        prev.map(apt => 
-          apt.id === appointmentId 
-            ? { ...apt, assigned_mechanic_id: mechanicId, job_status: "approved" } 
-            : apt
-        )
-      );
-
-      toast({ title: "Mechanic Assigned", description: "Job has been assigned and approved" });
+      // If job completed, trigger SMS notification via edge function
+      if (newStatus === "completed") {
+        const appointment = appointments.find(a => a.id === appointmentId);
+        if (appointment) {
+          await supabase.functions.invoke("send-completion-sms", {
+            body: {
+              customerPhone: appointment.customer_phone,
+              customerName: appointment.customer_name,
+              vehicleInfo: `${appointment.vehicle_year} ${appointment.vehicle_make} ${appointment.vehicle_model}`
+            }
+          });
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -184,23 +138,23 @@ const AdminDashboard = () => {
     return colors[status as keyof typeof colors] || "bg-gray-500";
   };
 
-  if (!isAdmin) return null;
+  if (!isMechanic) return null;
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8 mt-16">
+      <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage all appointments and assign mechanics</p>
+          <h1 className="text-4xl font-bold text-foreground mb-2">My Assigned Jobs</h1>
+          <p className="text-muted-foreground">Mechanic Dashboard</p>
         </div>
 
         {loading ? (
-          <p>Loading appointments...</p>
+          <p>Loading jobs...</p>
         ) : appointments.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">No appointments yet</p>
+              <p className="text-muted-foreground">No jobs assigned yet</p>
             </CardContent>
           </Card>
         ) : (
@@ -260,44 +214,21 @@ const AdminDashboard = () => {
                     </div>
                   )}
 
-                  <div className="flex flex-col md:flex-row gap-4 pt-4 border-t">
-                    <div className="flex-1">
-                      <label className="text-sm font-medium mb-2 block">Assign Mechanic:</label>
-                      <Select
-                        value={apt.assigned_mechanic_id || ""}
-                        onValueChange={(value) => assignMechanic(apt.id, value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select mechanic" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mechanics.map((mechanic) => (
-                            <SelectItem key={mechanic.id} value={mechanic.id}>
-                              {mechanic.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex-1">
-                      <label className="text-sm font-medium mb-2 block">Update Status:</label>
-                      <Select
-                        value={apt.job_status}
-                        onValueChange={(value) => updateJobStatus(apt.id, value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="flex items-center gap-4 pt-2">
+                    <Label className="text-sm font-medium">Update Status:</Label>
+                    <Select
+                      value={apt.job_status}
+                      onValueChange={(value) => updateJobStatus(apt.id, value)}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
@@ -310,4 +241,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default MechanicDashboard;

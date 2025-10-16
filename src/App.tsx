@@ -8,6 +8,9 @@ import Services from "./pages/Services";
 import BookAppointment from "./pages/BookAppointment";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import Auth from "./pages/Auth";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import MechanicDashboard from "./pages/MechanicDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +28,9 @@ const App = () => (
           <Route path="/book" element={<BookAppointment />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+          <Route path="/mechanic" element={<MechanicDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

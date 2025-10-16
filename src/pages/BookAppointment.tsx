@@ -35,6 +35,11 @@ const formSchema = z.object({
   vehicle_make: z.string().min(2, "Make is required").max(50),
   vehicle_model: z.string().min(1, "Model is required").max(50),
   vehicle_year: z.coerce.number().min(1900).max(new Date().getFullYear() + 1),
+  vin: z.string().length(17, "VIN must be exactly 17 characters").optional().or(z.literal("")),
+  street_address: z.string().max(200).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().length(2, "State must be 2 characters").optional().or(z.literal("")),
+  zip_code: z.string().max(10).optional(),
   service_id: z.string().uuid("Please select a service"),
   appointment_date: z.string().min(1, "Date is required"),
   appointment_time: z.string().min(1, "Time is required"),
@@ -61,6 +66,11 @@ const BookAppointment = () => {
       vehicle_make: "",
       vehicle_model: "",
       vehicle_year: new Date().getFullYear(),
+      vin: "",
+      street_address: "",
+      city: "",
+      state: "",
+      zip_code: "",
       service_id: location.state?.selectedService || "",
       appointment_date: "",
       appointment_time: "",
@@ -86,6 +96,14 @@ const BookAppointment = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Please log in to book an appointment");
+        navigate("/auth");
+        return;
+      }
+
       const { error } = await supabase.from("appointments").insert([
         {
           customer_name: values.customer_name,
@@ -94,11 +112,16 @@ const BookAppointment = () => {
           vehicle_make: values.vehicle_make,
           vehicle_model: values.vehicle_model,
           vehicle_year: values.vehicle_year,
+          vin: values.vin || null,
+          street_address: values.street_address || null,
+          city: values.city || null,
+          state: values.state || null,
+          zip_code: values.zip_code || null,
           service_id: values.service_id,
           appointment_date: values.appointment_date,
           appointment_time: values.appointment_time,
           notes: values.notes || null,
-          status: "pending",
+          job_status: "pending",
         },
       ]);
 
@@ -106,10 +129,9 @@ const BookAppointment = () => {
 
       toast.success("Appointment booked successfully! We'll contact you soon.");
       form.reset();
-      navigate("/");
+      navigate("/customer-dashboard");
     } catch (error: any) {
       toast.error("Failed to book appointment. Please try again.");
-      console.error("Error booking appointment:", error);
     } finally {
       setLoading(false);
     }
@@ -226,6 +248,83 @@ const BookAppointment = () => {
                           <FormLabel>Year *</FormLabel>
                           <FormControl>
                             <Input placeholder="2020" type="number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="vin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>VIN (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="1HGBH41JXMN109186" maxLength={17} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Address Information */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold">Service Location (Optional)</h3>
+
+                  <FormField
+                    control={form.control}
+                    name="street_address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Street Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 Main St" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input placeholder="New York" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>State</FormLabel>
+                          <FormControl>
+                            <Input placeholder="NY" maxLength={2} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="zip_code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ZIP Code</FormLabel>
+                          <FormControl>
+                            <Input placeholder="10001" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
