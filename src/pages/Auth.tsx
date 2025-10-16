@@ -9,12 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import rlLogo from "@/assets/rl-logo.png";
+import { Building2 } from "lucide-react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -41,32 +43,67 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
         if (error) throw error;
-        toast({ title: "Welcome back!", description: "You've successfully logged in." });
+        
+        toast({
+          title: "Success",
+          description: "Logged in successfully!",
+        });
+        navigate("/");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`
-          }
+            emailRedirectTo: `${window.location.origin}/`,
+          },
         });
+        
         if (error) throw error;
+        
         toast({
-          title: "Account created!",
-          description: "You can now log in with your credentials."
+          title: "Success",
+          description: "Account created! Please check your email to verify.",
         });
-        setIsLogin(true);
       }
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOktaSSO = async () => {
+    setSsoLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithSSO({
+        domain: 'rlautorepair.okta.com', // Replace with your Okta domain
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      toast({
+        title: "SSO Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      setSsoLoading(false);
     }
   };
 
@@ -111,6 +148,29 @@ const Auth = () => {
                 {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
               </Button>
             </form>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleOktaSSO}
+              disabled={ssoLoading}
+            >
+              <Building2 className="mr-2 h-4 w-4" />
+              {ssoLoading ? "Redirecting..." : "Sign in with Okta SSO"}
+            </Button>
+
             <div className="mt-4 text-center text-sm">
               <button
                 type="button"
