@@ -219,6 +219,35 @@ const BookAppointment = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
+                      name="vehicle_year"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Year *</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString()}
+                            disabled={!form.getValues("vehicle_model")}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select year" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background z-50">
+                              {availableYears.map((year) => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="vehicle_make"
                       render={({ field }) => (
                         <FormItem>
@@ -278,35 +307,6 @@ const BookAppointment = () => {
                               {availableModels.map((model) => (
                                 <SelectItem key={model} value={model}>
                                   {model}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="vehicle_year"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Year *</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(parseInt(value))} 
-                            value={field.value?.toString()}
-                            disabled={!form.getValues("vehicle_model")}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="bg-background">
-                                <SelectValue placeholder="Select year" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-background z-50">
-                              {availableYears.map((year) => (
-                                <SelectItem key={year} value={year.toString()}>
-                                  {year}
                                 </SelectItem>
                               ))}
                             </SelectContent>
