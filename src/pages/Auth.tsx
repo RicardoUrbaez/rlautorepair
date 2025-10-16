@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import rlLogo from "@/assets/rl-logo.png";
-import { Building2 } from "lucide-react";
+import { Building2, Users, Wrench } from "lucide-react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,6 +18,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
+  const [userType, setUserType] = useState<"customer" | "mechanic">("customer");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -49,18 +51,40 @@ const Auth = () => {
         });
         
         if (error) throw error;
+
+        // Check user role for mechanics
+        if (userType === "mechanic") {
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", data.user.id)
+            .eq("role", "mechanic")
+            .maybeSingle();
+
+          if (!roleData) {
+            await supabase.auth.signOut();
+            throw new Error("You don't have mechanic access. Please contact admin.");
+          }
+          navigate("/mechanic");
+        } else {
+          navigate("/customer-dashboard");
+        }
         
         toast({
           title: "Success",
           description: "Logged in successfully!",
         });
-        navigate("/");
       } else {
+        // Only allow signup for customers
+        if (userType === "mechanic") {
+          throw new Error("Mechanic accounts must be created by an administrator.");
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}/customer-dashboard`,
           },
         });
         
@@ -68,8 +92,9 @@ const Auth = () => {
         
         toast({
           title: "Success",
-          description: "Account created! Please check your email to verify.",
+          description: "Account created! You can now log in.",
         });
+        setIsLogin(true);
       }
     } catch (error: any) {
       toast({
@@ -116,10 +141,23 @@ const Auth = () => {
             <img src={rlLogo} alt="R&L Auto Repair" className="h-16 mx-auto" />
             <CardTitle className="text-2xl">{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
             <CardDescription>
-              {isLogin ? "Sign in to your account" : "Sign up for an account"}
+              {isLogin ? "Sign in to your account" : "Sign up for a customer account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <Tabs value={userType} onValueChange={(v) => setUserType(v as "customer" | "mechanic")} className="mb-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="customer" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Customer
+                </TabsTrigger>
+                <TabsTrigger value="mechanic" className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  Mechanic
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -149,27 +187,43 @@ const Auth = () => {
               </Button>
             </form>
 
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
+            {userType === "customer" && !isLogin && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                By signing up, you'll be able to book appointments and track your service history.
+              </p>
+            )}
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleOktaSSO}
-              disabled={ssoLoading}
-            >
-              <Building2 className="mr-2 h-4 w-4" />
-              {ssoLoading ? "Redirecting..." : "Sign in with Okta SSO"}
-            </Button>
+            {userType === "mechanic" && !isLogin && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Mechanic accounts are created by administrators only.
+              </p>
+            )}
+
+            {userType === "customer" && (
+              <>
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleOktaSSO}
+                  disabled={ssoLoading}
+                >
+                  <Building2 className="mr-2 h-4 w-4" />
+                  {ssoLoading ? "Redirecting..." : "Sign in with Okta SSO"}
+                </Button>
+              </>
+            )}
 
             <div className="mt-4 text-center text-sm">
               <button
