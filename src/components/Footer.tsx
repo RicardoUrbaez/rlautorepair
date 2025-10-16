@@ -14,7 +14,7 @@ const Footer = () => {
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/rlautorepair"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-foreground/80 hover:text-accent smooth-transition"
@@ -22,7 +22,7 @@ const Footer = () => {
                 <Facebook className="h-6 w-6" />
               </a>
               <a
-                href="https://instagram.com"
+                href="https://instagram.com/rl_auto_repair"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-foreground/80 hover:text-accent smooth-transition"
@@ -76,15 +76,15 @@ const Footer = () => {
             <div className="space-y-3 text-primary-foreground/80">
               <div className="flex items-start space-x-2">
                 <MapPin className="h-5 w-5 mt-1 flex-shrink-0" />
-                <span>123 Auto Street, Car City, CC 12345</span>
+                <span>1010 St Georges Avenue<br />Rahway, NJ 07065</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-5 w-5 flex-shrink-0" />
-                <span>(555) 123-4567</span>
+                <span>(732) 381-0020</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 flex-shrink-0" />
-                <span>info@rlautorepair.com</span>
+                <span>RNLAUTOPROFESSIONAL.COM</span>
               </div>
             </div>
           </div>
