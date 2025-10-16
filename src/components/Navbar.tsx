@@ -4,7 +4,7 @@ import { Menu, X, LogOut, User, Wrench, Shield, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import rlLogo from "@/assets/rl-logo.png";
+import rlLogoRound from "@/assets/rl-logo-round.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,7 +71,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <img src={rlLogo} alt="R&L Auto Repair" className="h-10 group-hover:scale-110 smooth-transition" />
+            <img src={rlLogoRound} alt="R&L Auto Repair" className="h-10 group-hover:scale-110 smooth-transition" />
             <span className="text-xl font-display font-bold text-secondary-foreground">
               R&L Auto Repair
             </span>

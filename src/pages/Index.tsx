@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import heroBanner from "@/assets/hero-banner.jpg";
-import rlLogoRound from "@/assets/rl-logo-round.png";
 
 const Index = () => {
   const features = [
@@ -45,11 +44,6 @@ const Index = () => {
         
         {/* Dark overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
-        
-        {/* Logo in top left corner */}
-        <div className="absolute top-8 left-8 z-10">
-          <img src={rlLogoRound} alt="R&L Auto Repair" className="h-24 w-24 object-contain" />
-        </div>
 
         <div className="relative z-10 text-center px-4 max-w-4xl">
           <h1 className="text-5xl md:text-6xl font-display font-bold text-white mb-6 animate-fade-in">
