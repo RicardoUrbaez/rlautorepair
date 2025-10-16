@@ -333,7 +333,7 @@ const BookAppointment = () => {
                           >
                             <FormControl>
                               <SelectTrigger className="bg-background">
-                                <SelectValue placeholder="Select year & make first" />
+                                <SelectValue placeholder="Select model" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-background z-50 max-h-[300px]">
