@@ -89,9 +89,9 @@ const Contact = () => {
                   <div>
                     <h3 className="font-bold mb-2">Address</h3>
                     <p className="text-muted-foreground">
-                      123 Auto Street
+                      1010 St Georges Avenue
                       <br />
-                      Car City, CC 12345
+                      Rahway, NJ 07065
                     </p>
                   </div>
                 </div>
@@ -104,7 +104,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-bold mb-2">Phone</h3>
-                    <p className="text-muted-foreground">(555) 123-4567</p>
+                    <p className="text-muted-foreground">(732) 381-0020</p>
                   </div>
                 </div>
               </Card>
@@ -116,7 +116,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-bold mb-2">Email</h3>
-                    <p className="text-muted-foreground">info@rlautorepair.com</p>
+                    <p className="text-muted-foreground">RNLAUTOPROFESSIONAL.COM</p>
                   </div>
                 </div>
               </Card>
@@ -129,8 +129,7 @@ const Contact = () => {
                   <div>
                     <h3 className="font-bold mb-2">Business Hours</h3>
                     <div className="text-muted-foreground space-y-1">
-                      <p>Monday - Friday: 8:00 AM - 6:00 PM</p>
-                      <p>Saturday: 9:00 AM - 4:00 PM</p>
+                      <p>Monday - Saturday: 8:00 AM - 6:00 PM</p>
                       <p>Sunday: Closed</p>
                     </div>
                   </div>
@@ -225,7 +224,7 @@ const Contact = () => {
             <Card className="p-4">
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.2176448232194!2d-73.98823492346069!3d40.748817371428076!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c259a9b3117469%3A0xd134e199a405a163!2sEmpire%20State%20Building!5e0!3m2!1sen!2sus!4v1710347285447!5m2!1sen!2sus"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3027.0890744516544!2d-74.28167812346606!3d40.60884557138682!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c3b362c2a5e0e3%3A0x8c4a6e6f0c7f5e6e!2sR%26L%20Auto%20Repair!5e0!3m2!1sen!2sus!4v1710347285447!5m2!1sen!2sus"
                   className="w-full h-full rounded-lg"
                   style={{ border: 0 }}
                   allowFullScreen
