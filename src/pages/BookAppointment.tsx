@@ -27,7 +27,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getAllMakes, getAllModels, getAllYears } from "@/data/vehicleData";
+import { getAllMakes, getAllModels, getAllYears, getModelsForMakeAndYear } from "@/data/vehicleData";
 
 const formSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -56,11 +56,11 @@ const BookAppointment = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedServices, setSelectedServices] = useState<string[]>([""]);
+  const [filteredModels, setFilteredModels] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   
   const makes = getAllMakes();
-  const models = getAllModels();
   const years = getAllYears();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -89,6 +89,25 @@ const BookAppointment = () => {
       setSelectedServices([location.state.selectedService]);
     }
   }, [location.state]);
+
+  // Update filtered models when year or make changes
+  useEffect(() => {
+    const year = form.watch("vehicle_year");
+    const make = form.watch("vehicle_make");
+    
+    if (year && make) {
+      const models = getModelsForMakeAndYear(make, year);
+      setFilteredModels(models);
+      
+      // Reset model if it's not available for the selected year/make combo
+      const currentModel = form.getValues("vehicle_model");
+      if (currentModel && !models.includes(currentModel)) {
+        form.setValue("vehicle_model", "");
+      }
+    } else {
+      setFilteredModels([]);
+    }
+  }, [form.watch("vehicle_year"), form.watch("vehicle_make")]);
 
   useEffect(() => {
     fetchServices();
@@ -310,14 +329,15 @@ const BookAppointment = () => {
                           <Select 
                             onValueChange={field.onChange} 
                             value={field.value}
+                            disabled={!form.getValues("vehicle_year") || !form.getValues("vehicle_make")}
                           >
                             <FormControl>
                               <SelectTrigger className="bg-background">
-                                <SelectValue placeholder="Select model" />
+                                <SelectValue placeholder="Select year & make first" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-background z-50 max-h-[300px]">
-                              {models.map((model) => (
+                              {filteredModels.map((model) => (
                                 <SelectItem key={model} value={model}>
                                   {model}
                                 </SelectItem>

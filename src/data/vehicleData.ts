@@ -277,6 +277,19 @@ export const getModelsForMake = (make: string): string[] => {
   return vehicle ? vehicle.models.map(m => m.model).sort() : [];
 };
 
+export const getModelsForMakeAndYear = (make: string, year: number): string[] => {
+  const vehicle = vehicleData.find(v => v.make === make);
+  if (!vehicle) return [];
+  
+  // Filter models that have the specified year
+  const filteredModels = vehicle.models
+    .filter(model => model.years.includes(year))
+    .map(model => model.model)
+    .sort();
+  
+  return filteredModels;
+};
+
 export const getYearsForMakeAndModel = (make: string, model: string): number[] => {
   const vehicle = vehicleData.find(v => v.make === make);
   if (!vehicle) return [];
