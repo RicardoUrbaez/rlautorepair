@@ -52,20 +52,25 @@ const Auth = () => {
         
         if (error) throw error;
 
-        // Check user role for mechanics
-        if (userType === "mechanic") {
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", data.user.id)
-            .eq("role", "mechanic")
-            .maybeSingle();
+        // Check user roles and redirect accordingly
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id);
 
-          if (!roleData) {
-            await supabase.auth.signOut();
-            throw new Error("You don't have mechanic access. Please contact admin.");
-          }
-          navigate("/mechanic");
+        const roles = roleData?.map(r => r.role) || [];
+
+        // Redirect based on role priority: admin > mechanic > customer
+        if (roles.includes("admin")) {
+          navigate("/admin-dashboard");
+        } else if (roles.includes("mechanic") && userType === "mechanic") {
+          navigate("/mechanic-dashboard");
+        } else if (roles.includes("mechanic") && userType !== "mechanic") {
+          await supabase.auth.signOut();
+          throw new Error("Please use the Mechanic login tab.");
+        } else if (userType === "mechanic") {
+          await supabase.auth.signOut();
+          throw new Error("You don't have mechanic access. Please contact admin.");
         } else {
           navigate("/customer-dashboard");
         }

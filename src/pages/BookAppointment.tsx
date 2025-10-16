@@ -146,17 +146,12 @@ const BookAppointment = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
+      // Get user if logged in (optional for public booking)
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("Please log in to book an appointment");
-        navigate("/auth");
-        return;
-      }
 
       // Create one appointment for each service
       const appointments = values.service_ids.map(service_id => ({
-        user_id: user.id,
+        user_id: user?.id || null,
         customer_name: values.customer_name,
         customer_email: values.customer_email,
         customer_phone: values.customer_phone,
@@ -182,7 +177,13 @@ const BookAppointment = () => {
       toast.success("Appointment(s) booked successfully! We'll contact you soon.");
       form.reset();
       setSelectedServices([""]);
-      navigate("/customer-dashboard");
+      
+      // Redirect to customer dashboard if logged in, otherwise home
+      if (user) {
+        navigate("/customer-dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
       toast.error("Failed to book appointment. Please try again.");
     } finally {
