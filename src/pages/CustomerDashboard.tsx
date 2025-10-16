@@ -36,7 +36,7 @@ const CustomerDashboard = () => {
         navigate("/auth");
       } else {
         setUser(session.user);
-        fetchAppointments(session.user.email!);
+        fetchAppointments(session.user.id);
       }
     });
 
@@ -45,19 +45,19 @@ const CustomerDashboard = () => {
         navigate("/auth");
       } else {
         setUser(session.user);
-        fetchAppointments(session.user.email!);
+        fetchAppointments(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const fetchAppointments = async (email: string) => {
+  const fetchAppointments = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from("appointments")
         .select("*")
-        .eq("customer_email", email)
+        .eq("user_id", userId)
         .order("appointment_date", { ascending: false });
 
       if (error) throw error;

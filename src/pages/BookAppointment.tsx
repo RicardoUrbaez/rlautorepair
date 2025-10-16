@@ -156,6 +156,7 @@ const BookAppointment = () => {
 
       // Create one appointment for each service
       const appointments = values.service_ids.map(service_id => ({
+        user_id: user.id,
         customer_name: values.customer_name,
         customer_email: values.customer_email,
         customer_phone: values.customer_phone,

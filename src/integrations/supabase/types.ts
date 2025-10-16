@@ -32,6 +32,7 @@ export type Database = {
           status: string
           street_address: string | null
           updated_at: string
+          user_id: string | null
           vehicle_make: string
           vehicle_model: string
           vehicle_year: number
@@ -55,6 +56,7 @@ export type Database = {
           status?: string
           street_address?: string | null
           updated_at?: string
+          user_id?: string | null
           vehicle_make: string
           vehicle_model: string
           vehicle_year: number
@@ -78,6 +80,7 @@ export type Database = {
           status?: string
           street_address?: string | null
           updated_at?: string
+          user_id?: string | null
           vehicle_make?: string
           vehicle_model?: string
           vehicle_year?: number
