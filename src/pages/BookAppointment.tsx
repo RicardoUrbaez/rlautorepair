@@ -27,6 +27,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAllMakes, getModelsForMake, getYearsForMakeAndModel } from "@/data/vehicleData";
 
 const formSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -54,8 +55,12 @@ interface Service {
 const BookAppointment = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
+  
+  const makes = getAllMakes();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -218,9 +223,30 @@ const BookAppointment = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Make *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Toyota" {...field} />
-                          </FormControl>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Reset model and year when make changes
+                              form.setValue("vehicle_model", "");
+                              form.setValue("vehicle_year", new Date().getFullYear());
+                              setAvailableModels(getModelsForMake(value));
+                              setAvailableYears([]);
+                            }} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select make" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background z-50">
+                              {makes.map((make) => (
+                                <SelectItem key={make} value={make}>
+                                  {make}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -232,9 +258,30 @@ const BookAppointment = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Model *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Camry" {...field} />
-                          </FormControl>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Reset year when model changes
+                              form.setValue("vehicle_year", new Date().getFullYear());
+                              const make = form.getValues("vehicle_make");
+                              setAvailableYears(getYearsForMakeAndModel(make, value));
+                            }} 
+                            value={field.value}
+                            disabled={!form.getValues("vehicle_make")}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select model" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background z-50">
+                              {availableModels.map((model) => (
+                                <SelectItem key={model} value={model}>
+                                  {model}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -246,9 +293,24 @@ const BookAppointment = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Year *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="2020" type="number" {...field} />
-                          </FormControl>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString()}
+                            disabled={!form.getValues("vehicle_model")}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select year" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background z-50">
+                              {availableYears.map((year) => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
