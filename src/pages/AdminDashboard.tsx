@@ -98,23 +98,22 @@ const AdminDashboard = () => {
 
   const fetchMechanics = async () => {
     try {
-      const { data: mechanicRoles } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
-        .select("user_id")
+        .select(`
+          user_id,
+          profiles!inner(email)
+        `)
         .eq("role", "mechanic");
 
-      if (mechanicRoles && mechanicRoles.length > 0) {
-        const mechanicIds = mechanicRoles.map(r => r.user_id);
-        const mechanics: Mechanic[] = [];
-        
-        for (const id of mechanicIds) {
-          const { data } = await supabase.auth.admin.getUserById(id);
-          if (data.user) {
-            mechanics.push({ id: data.user.id, email: data.user.email || "" });
-          }
-        }
-        setMechanics(mechanics);
-      }
+      if (error) throw error;
+
+      const mechanics: Mechanic[] = (data || []).map(item => ({
+        id: item.user_id,
+        email: (item.profiles as any).email
+      }));
+      
+      setMechanics(mechanics);
     } catch (error) {
       console.error("Error fetching mechanics:", error);
     }
