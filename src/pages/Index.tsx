@@ -32,15 +32,22 @@ const Index = () => {
 
       {/* Hero Section */}
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden racing-stripes">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `linear-gradient(to bottom, rgba(26, 47, 71, 0.7), rgba(26, 47, 71, 0.85)), url(${heroBanner})`,
-          }}
-        />
+        {/* Video Background */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/racing-background.mp4" type="video/mp4" />
+        </video>
+        
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
         
         {/* Animated Car */}
-        <div className="absolute bottom-20 w-full">
+        <div className="absolute bottom-20 w-full z-10">
           <img src={carIcon} alt="Racing car" className="car-animation h-20 w-auto" />
         </div>
 
