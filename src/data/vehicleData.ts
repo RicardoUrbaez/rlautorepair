@@ -250,6 +250,28 @@ export const getAllMakes = (): string[] => {
   return vehicleData.map(vehicle => vehicle.make).sort();
 };
 
+export const getAllModels = (): string[] => {
+  const allModels = new Set<string>();
+  vehicleData.forEach(vehicle => {
+    vehicle.models.forEach(model => {
+      allModels.add(model.model);
+    });
+  });
+  return Array.from(allModels).sort();
+};
+
+export const getAllYears = (): number[] => {
+  const allYears = new Set<number>();
+  vehicleData.forEach(vehicle => {
+    vehicle.models.forEach(model => {
+      model.years.forEach(year => {
+        allYears.add(year);
+      });
+    });
+  });
+  return Array.from(allYears).sort((a, b) => b - a);
+};
+
 export const getModelsForMake = (make: string): string[] => {
   const vehicle = vehicleData.find(v => v.make === make);
   return vehicle ? vehicle.models.map(m => m.model).sort() : [];

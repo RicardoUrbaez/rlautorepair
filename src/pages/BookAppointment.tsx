@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Calendar } from "lucide-react";
+import { Calendar, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getAllMakes, getModelsForMake, getYearsForMakeAndModel } from "@/data/vehicleData";
+import { getAllMakes, getAllModels, getAllYears } from "@/data/vehicleData";
 
 const formSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -41,7 +41,7 @@ const formSchema = z.object({
   city: z.string().max(100).optional(),
   state: z.string().length(2, "State must be 2 characters").optional().or(z.literal("")),
   zip_code: z.string().max(10).optional(),
-  service_id: z.string().uuid("Please select a service"),
+  service_ids: z.array(z.string().uuid()).min(1, "Please select at least one service"),
   appointment_date: z.string().min(1, "Date is required"),
   appointment_time: z.string().min(1, "Time is required"),
   notes: z.string().max(1000).optional(),
@@ -55,12 +55,13 @@ interface Service {
 const BookAppointment = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([""]);
   const location = useLocation();
   const navigate = useNavigate();
   
   const makes = getAllMakes();
+  const models = getAllModels();
+  const years = getAllYears();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,12 +77,18 @@ const BookAppointment = () => {
       city: "",
       state: "",
       zip_code: "",
-      service_id: location.state?.selectedService || "",
+      service_ids: location.state?.selectedService ? [location.state.selectedService] : [],
       appointment_date: "",
       appointment_time: "",
       notes: "",
     },
   });
+
+  useEffect(() => {
+    if (location.state?.selectedService) {
+      setSelectedServices([location.state.selectedService]);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     fetchServices();
@@ -98,6 +105,25 @@ const BookAppointment = () => {
     }
   };
 
+  const addService = () => {
+    setSelectedServices([...selectedServices, ""]);
+  };
+
+  const removeService = (index: number) => {
+    if (selectedServices.length > 1) {
+      const updated = selectedServices.filter((_, i) => i !== index);
+      setSelectedServices(updated);
+      form.setValue("service_ids", updated.filter(s => s !== ""));
+    }
+  };
+
+  const updateService = (index: number, value: string) => {
+    const updated = [...selectedServices];
+    updated[index] = value;
+    setSelectedServices(updated);
+    form.setValue("service_ids", updated.filter(s => s !== ""));
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
@@ -109,31 +135,33 @@ const BookAppointment = () => {
         return;
       }
 
-      const { error } = await supabase.from("appointments").insert([
-        {
-          customer_name: values.customer_name,
-          customer_email: values.customer_email,
-          customer_phone: values.customer_phone,
-          vehicle_make: values.vehicle_make,
-          vehicle_model: values.vehicle_model,
-          vehicle_year: values.vehicle_year,
-          vin: values.vin || null,
-          street_address: values.street_address || null,
-          city: values.city || null,
-          state: values.state || null,
-          zip_code: values.zip_code || null,
-          service_id: values.service_id,
-          appointment_date: values.appointment_date,
-          appointment_time: values.appointment_time,
-          notes: values.notes || null,
-          job_status: "pending",
-        },
-      ]);
+      // Create one appointment for each service
+      const appointments = values.service_ids.map(service_id => ({
+        customer_name: values.customer_name,
+        customer_email: values.customer_email,
+        customer_phone: values.customer_phone,
+        vehicle_make: values.vehicle_make,
+        vehicle_model: values.vehicle_model,
+        vehicle_year: values.vehicle_year,
+        vin: values.vin || null,
+        street_address: values.street_address || null,
+        city: values.city || null,
+        state: values.state || null,
+        zip_code: values.zip_code || null,
+        service_id: service_id,
+        appointment_date: values.appointment_date,
+        appointment_time: values.appointment_time,
+        notes: values.notes || null,
+        job_status: "pending",
+      }));
+
+      const { error } = await supabase.from("appointments").insert(appointments);
 
       if (error) throw error;
 
-      toast.success("Appointment booked successfully! We'll contact you soon.");
+      toast.success("Appointment(s) booked successfully! We'll contact you soon.");
       form.reset();
+      setSelectedServices([""]);
       navigate("/customer-dashboard");
     } catch (error: any) {
       toast.error("Failed to book appointment. Please try again.");
@@ -226,15 +254,14 @@ const BookAppointment = () => {
                           <Select 
                             onValueChange={(value) => field.onChange(parseInt(value))} 
                             value={field.value?.toString()}
-                            disabled={!form.getValues("vehicle_model")}
                           >
                             <FormControl>
                               <SelectTrigger className="bg-background">
                                 <SelectValue placeholder="Select year" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-background z-50">
-                              {availableYears.map((year) => (
+                            <SelectContent className="bg-background z-50 max-h-[300px]">
+                              {years.map((year) => (
                                 <SelectItem key={year} value={year.toString()}>
                                   {year}
                                 </SelectItem>
@@ -253,14 +280,7 @@ const BookAppointment = () => {
                         <FormItem>
                           <FormLabel>Make *</FormLabel>
                           <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Reset model and year when make changes
-                              form.setValue("vehicle_model", "");
-                              form.setValue("vehicle_year", new Date().getFullYear());
-                              setAvailableModels(getModelsForMake(value));
-                              setAvailableYears([]);
-                            }} 
+                            onValueChange={field.onChange} 
                             value={field.value}
                           >
                             <FormControl>
@@ -268,7 +288,7 @@ const BookAppointment = () => {
                                 <SelectValue placeholder="Select make" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-background z-50">
+                            <SelectContent className="bg-background z-50 max-h-[300px]">
                               {makes.map((make) => (
                                 <SelectItem key={make} value={make}>
                                   {make}
@@ -288,23 +308,16 @@ const BookAppointment = () => {
                         <FormItem>
                           <FormLabel>Model *</FormLabel>
                           <Select 
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Reset year when model changes
-                              form.setValue("vehicle_year", new Date().getFullYear());
-                              const make = form.getValues("vehicle_make");
-                              setAvailableYears(getYearsForMakeAndModel(make, value));
-                            }} 
+                            onValueChange={field.onChange} 
                             value={field.value}
-                            disabled={!form.getValues("vehicle_make")}
                           >
                             <FormControl>
                               <SelectTrigger className="bg-background">
                                 <SelectValue placeholder="Select model" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-background z-50">
-                              {availableModels.map((model) => (
+                            <SelectContent className="bg-background z-50 max-h-[300px]">
+                              {models.map((model) => (
                                 <SelectItem key={model} value={model}>
                                   {model}
                                 </SelectItem>
@@ -334,7 +347,7 @@ const BookAppointment = () => {
 
                 {/* Address Information */}
                 <div className="space-y-4">
-                  <h3 className="text-xl font-bold">Service Location (Optional)</h3>
+                  <h3 className="text-xl font-bold">Address (Optional)</h3>
 
                   <FormField
                     control={form.control}
@@ -399,19 +412,18 @@ const BookAppointment = () => {
                 <div className="space-y-4">
                   <h3 className="text-xl font-bold">Appointment Details</h3>
 
-                  <FormField
-                    control={form.control}
-                    name="service_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Service Type *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a service" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
+                  <div className="space-y-3">
+                    <FormLabel>Services *</FormLabel>
+                    {selectedServices.map((selectedService, index) => (
+                      <div key={index} className="flex gap-2 items-start">
+                        <Select 
+                          onValueChange={(value) => updateService(index, value)} 
+                          value={selectedService}
+                        >
+                          <SelectTrigger className="flex-1 bg-background">
+                            <SelectValue placeholder="Select a service" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
                             {services.map((service) => (
                               <SelectItem key={service.id} value={service.id}>
                                 {service.name}
@@ -419,10 +431,32 @@ const BookAppointment = () => {
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormMessage />
-                      </FormItem>
+                        {selectedServices.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeService(index)}
+                            className="shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addService}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Another Service
+                    </Button>
+                    {form.formState.errors.service_ids && (
+                      <p className="text-sm text-destructive">{form.formState.errors.service_ids.message}</p>
                     )}
-                  />
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
