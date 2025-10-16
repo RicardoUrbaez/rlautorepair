@@ -5,8 +5,12 @@ import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import heroBanner from "@/assets/hero-banner.jpg";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 
 const Index = () => {
+  const featuresSection = useScrollAnimation();
+  const ctaSection = useScrollAnimation();
+
   const features = [
     {
       icon: Wrench,
@@ -70,15 +74,24 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-background">
+      <section 
+        ref={featuresSection.ref}
+        className={`py-20 bg-background transition-all duration-700 ${
+          featuresSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-display font-bold text-center mb-12">Why Choose R&L Auto Repair?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="p-8 text-center hover:shadow-xl smooth-transition border-2 hover:border-accent"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className={`p-8 text-center hover:shadow-xl smooth-transition border-2 hover:border-accent transition-all duration-700 ${
+                  featuresSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+                }`}
+                style={{ 
+                  transitionDelay: featuresSection.isVisible ? `${index * 150}ms` : "0ms"
+                }}
               >
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-accent/10 rounded-full mb-4">
                   <feature.icon className="h-8 w-8 text-accent" />
@@ -92,7 +105,12 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary text-primary-foreground">
+      <section 
+        ref={ctaSection.ref}
+        className={`py-20 bg-primary text-primary-foreground transition-all duration-700 ${
+          ctaSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl font-display font-bold mb-6">Ready to Get Started?</h2>
           <p className="text-xl mb-8 text-primary-foreground/90">
