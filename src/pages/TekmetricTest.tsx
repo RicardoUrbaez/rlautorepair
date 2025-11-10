@@ -18,6 +18,7 @@ import {
   debugTekmetricConnection,
   createTestAppointment,
   getTekmetricEnvironment,
+  fetchTekmetricJobs,
 } from "@/lib/tekmetric";
 import { Loader2, CheckCircle, XCircle, RefreshCw, Clock, Database, AlertTriangle, Bug, Send } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -32,6 +33,7 @@ export default function TekmetricTest() {
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [appointments, setAppointments] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [syncLogs, setSyncLogs] = useState<any[]>([]);
   const [syncedCustomers, setSyncedCustomers] = useState<any[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -40,6 +42,11 @@ export default function TekmetricTest() {
     environment: string;
     baseUrl: string | null;
   } | null>(null);
+  const [syncStats, setSyncStats] = useState({
+    totalCustomers: 0,
+    totalAppointments: 0,
+    activeJobs: 0,
+  });
   
   // Test appointment form
   const [testAppointment, setTestAppointment] = useState({
@@ -53,7 +60,26 @@ export default function TekmetricTest() {
   useEffect(() => {
     loadSyncData();
     loadEnvironment();
+    loadSyncStats();
   }, []);
+
+  const loadSyncStats = async () => {
+    try {
+      const [customersData, appointmentsData, jobsData] = await Promise.all([
+        fetchTekmetricCustomers({ shopId: '238' }).catch(() => ({ content: [] })),
+        fetchTekmetricAppointments({ shopId: '238' }).catch(() => []),
+        fetchTekmetricJobs({ shopId: '238', status: 'open' }).catch(() => ({ content: [] })),
+      ]);
+
+      setSyncStats({
+        totalCustomers: customersData?.content?.length || 0,
+        totalAppointments: Array.isArray(appointmentsData) ? appointmentsData.length : 0,
+        activeJobs: jobsData?.content?.length || 0,
+      });
+    } catch (error) {
+      console.error('Error loading sync stats:', error);
+    }
+  };
 
   const loadEnvironment = async () => {
     try {
@@ -230,6 +256,74 @@ export default function TekmetricTest() {
             <h1 className="text-4xl font-bold">Tekmetric Integration Dashboard</h1>
             <p className="text-muted-foreground">Debug API connection, test appointments, and monitor sync status</p>
           </div>
+
+          {/* Sync Status Widget */}
+          <Card className="border-2 border-primary bg-gradient-to-br from-primary/5 to-transparent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Tekmetric Sync Status
+              </CardTitle>
+              <CardDescription>Live connection and data sync overview</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">Connection</span>
+                    {connectionStatus === 'success' ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : connectionStatus === 'error' ? (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    ) : (
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {connectionStatus === 'success' ? '✅' : connectionStatus === 'error' ? '❌' : '⏳'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {connectionStatus === 'success' ? 'Connected' : connectionStatus === 'error' ? 'Disconnected' : 'Unknown'}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <span className="text-xs text-muted-foreground">Customers</span>
+                  <p className="text-2xl font-bold mt-2">{syncStats.totalCustomers}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total synced</p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <span className="text-xs text-muted-foreground">Appointments</span>
+                  <p className="text-2xl font-bold mt-2">{syncStats.totalAppointments}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total created</p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <span className="text-xs text-muted-foreground">Active Jobs</span>
+                  <p className="text-2xl font-bold mt-2">{syncStats.activeJobs}</p>
+                  <p className="text-xs text-muted-foreground mt-1">In progress</p>
+                </div>
+              </div>
+
+              {lastSync && (
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Last sync: {formatDistanceToNow(new Date(lastSync), { addSuffix: true })}
+                </div>
+              )}
+
+              <Button 
+                onClick={loadSyncStats} 
+                variant="outline" 
+                size="sm"
+                className="w-full"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Stats
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Environment Banner */}
           {environment && (

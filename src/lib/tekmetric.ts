@@ -84,6 +84,7 @@ export async function fetchTekmetricCustomers(params?: {
   customerId?: string;
   email?: string;
   phone?: string;
+  shopId?: string;
 }) {
   try {
     const { data, error } = await supabase.functions.invoke('tekmetric-customers');
@@ -92,6 +93,91 @@ export async function fetchTekmetricCustomers(params?: {
     return data;
   } catch (error) {
     console.error('Error fetching Tekmetric customers:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create customer in Tekmetric
+ */
+export async function createTekmetricCustomer(customer: {
+  shopId: string | number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}) {
+  try {
+    const { data, error } = await supabase.functions.invoke('tekmetric-customers', {
+      body: customer,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating Tekmetric customer:', error);
+    throw error;
+  }
+}
+
+/**
+ * Find existing customer or create new one in Tekmetric
+ */
+export async function findOrCreateCustomer(params: {
+  shopId: string | number;
+  email: string;
+  phone: string;
+  firstName: string;
+  lastName: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}) {
+  try {
+    // First, try to find existing customer by email
+    const customers = await fetchTekmetricCustomers({ 
+      shopId: params.shopId.toString(),
+      email: params.email 
+    });
+    
+    if (customers?.content?.length > 0) {
+      console.log('Found existing customer:', customers.content[0].id);
+      return { customer: customers.content[0], created: false };
+    }
+  } catch (error) {
+    console.log('No existing customer found, will create new one');
+  }
+
+  // Create new customer
+  const result = await createTekmetricCustomer(params);
+  if (result.success && result.data) {
+    return { customer: result.data, created: true };
+  }
+  
+  throw new Error(result.error?.message || 'Failed to create customer');
+}
+
+/**
+ * Fetch repair orders/jobs from Tekmetric
+ */
+export async function fetchTekmetricJobs(params?: {
+  shopId?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  try {
+    const { data, error } = await supabase.functions.invoke('tekmetric-jobs');
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching Tekmetric jobs:', error);
     throw error;
   }
 }
