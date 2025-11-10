@@ -307,3 +307,18 @@ export async function fetchSyncedOrders() {
     throw error;
   }
 }
+
+/**
+ * Discover available Tekmetric API endpoints
+ */
+export async function discoverTekmetricEndpoints() {
+  try {
+    const { data, error } = await supabase.functions.invoke('tekmetric-endpoints');
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error discovering Tekmetric endpoints:', error);
+    throw error;
+  }
+}
