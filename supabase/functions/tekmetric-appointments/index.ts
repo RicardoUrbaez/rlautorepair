@@ -56,7 +56,8 @@ serve(async (req) => {
 
       let apiUrl = `https://${baseUrl}/api/v1/appointments`;
       const params = new URLSearchParams();
-      if (shopId) params.append('shopId', shopId);
+      // Tekmetric API requires 'shop' parameter (not 'shopId')
+      if (shopId) params.append('shop', shopId);
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
       
