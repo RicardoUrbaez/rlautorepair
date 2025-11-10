@@ -19,8 +19,9 @@ import {
   createTestAppointment,
   getTekmetricEnvironment,
   fetchTekmetricJobs,
+  discoverTekmetricEndpoints,
 } from "@/lib/tekmetric";
-import { Loader2, CheckCircle, XCircle, RefreshCw, Clock, Database, AlertTriangle, Bug, Send } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, RefreshCw, Clock, Database, AlertTriangle, Bug, Send, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -30,6 +31,8 @@ export default function TekmetricTest() {
   const [syncing, setSyncing] = useState(false);
   const [debugging, setDebugging] = useState(false);
   const [creatingAppointment, setCreatingAppointment] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [endpointResults, setEndpointResults] = useState<any>(null);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [appointments, setAppointments] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -230,6 +233,41 @@ export default function TekmetricTest() {
     } finally {
       setCreatingAppointment(false);
     }
+  };
+
+  const handleDiscoverEndpoints = async () => {
+    setDiscovering(true);
+    try {
+      toast.info('Discovering available API endpoints...');
+      const result = await discoverTekmetricEndpoints();
+      console.log('Endpoint discovery result:', result);
+      setEndpointResults(result);
+      
+      if (result.status === 'success') {
+        toast.success(`✅ Discovered ${result.summary.available}/${result.summary.totalEndpoints} available endpoints`);
+      } else {
+        toast.error('Discovery failed: ' + result.error);
+      }
+    } catch (error) {
+      toast.error('Error discovering endpoints: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('Full error:', error);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const getStatusIcon = (status: number) => {
+    if (status >= 200 && status < 300) return '✅';
+    if (status >= 400 && status < 500) return '⚠️';
+    if (status >= 500 || status === 0) return '❌';
+    return '❓';
+  };
+
+  const getStatusColor = (status: number) => {
+    if (status >= 200 && status < 300) return 'text-green-600 bg-green-50 border-green-200';
+    if (status >= 400 && status < 500) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    if (status >= 500 || status === 0) return 'text-red-600 bg-red-50 border-red-200';
+    return 'text-gray-600 bg-gray-50 border-gray-200';
   };
 
   const getSyncStatusBadge = (status: string) => {
@@ -510,6 +548,110 @@ export default function TekmetricTest() {
               <p className="text-xs text-muted-foreground">
                 💡 Tip: Run diagnostics first to auto-fill customer and shop IDs
               </p>
+            </CardContent>
+          </Card>
+
+          {/* API Endpoint Explorer */}
+          <Card className="border-2 border-blue-500">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    🔍 API Endpoint Explorer
+                  </CardTitle>
+                  <CardDescription>Discover available Tekmetric API endpoints in your environment</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button 
+                onClick={handleDiscoverEndpoints} 
+                disabled={discovering}
+                className="w-full"
+                size="lg"
+                variant="default"
+              >
+                {discovering ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Discovering Endpoints...
+                  </>
+                ) : (
+                  <>
+                    🔍 Discover Available Endpoints
+                  </>
+                )}
+              </Button>
+
+              {endpointResults && (
+                <div className="space-y-4">
+                  <Alert className="border-blue-500">
+                    <Database className="h-4 w-4" />
+                    <AlertTitle>Discovery Summary</AlertTitle>
+                    <AlertDescription>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                        <div className="text-center p-2 rounded bg-green-50 border border-green-200">
+                          <p className="text-2xl font-bold text-green-700">{endpointResults.summary.available}</p>
+                          <p className="text-xs text-green-600">Available</p>
+                        </div>
+                        <div className="text-center p-2 rounded bg-yellow-50 border border-yellow-200">
+                          <p className="text-2xl font-bold text-yellow-700">{endpointResults.summary.unauthorized}</p>
+                          <p className="text-xs text-yellow-600">Unauthorized</p>
+                        </div>
+                        <div className="text-center p-2 rounded bg-gray-50 border border-gray-200">
+                          <p className="text-2xl font-bold text-gray-700">{endpointResults.summary.notFound}</p>
+                          <p className="text-xs text-gray-600">Not Found</p>
+                        </div>
+                        <div className="text-center p-2 rounded bg-red-50 border border-red-200">
+                          <p className="text-2xl font-bold text-red-700">{endpointResults.summary.errors}</p>
+                          <p className="text-xs text-red-600">Errors</p>
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Endpoint</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Count</TableHead>
+                          <TableHead>Response Time</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(endpointResults.endpoints).map(([endpoint, result]: [string, any]) => (
+                          <TableRow key={endpoint} className={getStatusColor(result.status)}>
+                            <TableCell className="font-mono text-sm">/{endpoint}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xl">{getStatusIcon(result.status)}</span>
+                                <span className="text-xs font-medium">{result.status}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {result.count !== undefined ? (
+                                <span className="font-semibold">{result.count} items</span>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs">{result.responseTime}ms</span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <details className="bg-muted p-4 rounded-lg">
+                    <summary className="cursor-pointer font-medium">View Raw Endpoint Data</summary>
+                    <pre className="text-xs mt-2 overflow-x-auto">{JSON.stringify(endpointResults, null, 2)}</pre>
+                  </details>
+                </div>
+              )}
             </CardContent>
           </Card>
 

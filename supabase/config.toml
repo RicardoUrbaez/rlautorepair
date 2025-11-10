@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.tekmetric-customers]
 verify_jwt = false
 
+[functions.tekmetric-jobs]
+verify_jwt = false
+
 [functions.sync-tekmetric]
 verify_jwt = false
 
@@ -19,4 +22,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.tekmetric-environment]
+verify_jwt = false
+
+[functions.tekmetric-endpoints]
 verify_jwt = false
