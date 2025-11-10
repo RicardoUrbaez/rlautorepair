@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.tekmetric-debug]
 verify_jwt = false
+
+[functions.tekmetric-environment]
+verify_jwt = false
