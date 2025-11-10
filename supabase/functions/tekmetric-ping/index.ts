@@ -22,16 +22,18 @@ serve(async (req) => {
 
     console.log('Testing Tekmetric API connection...');
 
+    // Encode credentials for Basic Auth
+    const credentials = btoa(`${clientId}:${clientSecret}`);
+
     // First, get OAuth token
-    const tokenResponse = await fetch(`https://${baseUrl}/api/v1/oauth2/token`, {
+    const tokenResponse = await fetch(`https://${baseUrl}/api/v1/oauth/token`, {
       method: 'POST',
       headers: {
+        'Authorization': `Basic ${credentials}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
         grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
       }).toString(),
     });
 
