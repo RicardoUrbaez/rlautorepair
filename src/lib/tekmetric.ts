@@ -95,3 +95,75 @@ export async function fetchTekmetricCustomers(params?: {
     throw error;
   }
 }
+
+/**
+ * Trigger a manual sync of Tekmetric data to Supabase
+ */
+export async function triggerTekmetricSync() {
+  try {
+    const { data, error } = await supabase.functions.invoke('sync-tekmetric', {
+      body: { syncType: 'manual' },
+    });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error triggering Tekmetric sync:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch sync logs from Supabase
+ */
+export async function fetchSyncLogs(limit = 10) {
+  try {
+    const { data, error } = await supabase
+      .from('sync_logs')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching sync logs:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch synced customers from Supabase
+ */
+export async function fetchSyncedCustomers() {
+  try {
+    const { data, error } = await supabase
+      .from('tekmetric_customers')
+      .select('*')
+      .order('synced_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching synced customers:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch synced orders from Supabase
+ */
+export async function fetchSyncedOrders() {
+  try {
+    const { data, error } = await supabase
+      .from('tekmetric_orders')
+      .select('*')
+      .order('synced_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching synced orders:', error);
+    throw error;
+  }
+}
