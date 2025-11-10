@@ -175,6 +175,158 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_logs: {
+        Row: {
+          completed_at: string | null
+          entity_type: string
+          error_message: string | null
+          id: string
+          records_synced: number | null
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          records_synced?: number | null
+          started_at?: string
+          status: string
+          sync_type: string
+        }
+        Update: {
+          completed_at?: string | null
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          records_synced?: number | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: []
+      }
+      tekmetric_customers: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          state: string | null
+          synced_at: string
+          tekmetric_id: string
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          state?: string | null
+          synced_at?: string
+          tekmetric_id: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          state?: string | null
+          synced_at?: string
+          tekmetric_id?: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      tekmetric_orders: {
+        Row: {
+          completed_date: string | null
+          created_at: string
+          created_date: string | null
+          customer_id: string | null
+          id: string
+          notes: string | null
+          repair_order_number: string | null
+          shop_id: string | null
+          status: string | null
+          synced_at: string
+          tekmetric_customer_id: string | null
+          tekmetric_id: string
+          total_amount: number | null
+          updated_at: string
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: number | null
+          vin: string | null
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string
+          created_date?: string | null
+          customer_id?: string | null
+          id?: string
+          notes?: string | null
+          repair_order_number?: string | null
+          shop_id?: string | null
+          status?: string | null
+          synced_at?: string
+          tekmetric_customer_id?: string | null
+          tekmetric_id: string
+          total_amount?: number | null
+          updated_at?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+          vin?: string | null
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string
+          created_date?: string | null
+          customer_id?: string | null
+          id?: string
+          notes?: string | null
+          repair_order_number?: string | null
+          shop_id?: string | null
+          status?: string | null
+          synced_at?: string
+          tekmetric_customer_id?: string | null
+          tekmetric_id?: string
+          total_amount?: number | null
+          updated_at?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+          vin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tekmetric_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "tekmetric_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
