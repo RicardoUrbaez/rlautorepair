@@ -41,29 +41,36 @@ serve(async (req) => {
   try {
     const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
     const accessToken = await getAccessToken();
+    
+    // Get request body for parameters
+    let params: any = {};
+    try {
+      const body = await req.text();
+      if (body) {
+        params = JSON.parse(body);
+      }
+    } catch (e) {
+      // No body or invalid JSON, continue with empty params
+    }
 
     console.log('=== TEKMETRIC APPOINTMENTS REQUEST ===');
     console.log(`Method: ${req.method}`);
     console.log(`Base URL: ${baseUrl}`);
-    console.log(`Environment: ${baseUrl?.includes('sandbox') ? 'SANDBOX' : 'PRODUCTION'}`);
+    console.log(`Params:`, JSON.stringify(params, null, 2));
 
-    if (req.method === 'GET') {
+    if (req.method === 'GET' || (req.method === 'POST' && !params.customerId)) {
       // Fetch appointments
-      const url = new URL(req.url);
-      const shopId = url.searchParams.get('shopId') || '';
-      const startDate = url.searchParams.get('startDate') || '';
-      const endDate = url.searchParams.get('endDate') || '';
+      const shopId = params.shopId || params.shop || '238';
+      const startDate = params.startDate || '';
+      const endDate = params.endDate || '';
 
       let apiUrl = `https://${baseUrl}/api/v1/appointments`;
-      const params = new URLSearchParams();
-      // Tekmetric API requires 'shop' parameter (not 'shopId')
-      if (shopId) params.append('shop', shopId);
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
+      const urlParams = new URLSearchParams();
+      urlParams.append('shop', shopId);
+      if (startDate) urlParams.append('startDate', startDate);
+      if (endDate) urlParams.append('endDate', endDate);
       
-      if (params.toString()) {
-        apiUrl += `?${params.toString()}`;
-      }
+      apiUrl += `?${urlParams.toString()}`;
 
       console.log('Fetching appointments from:', apiUrl);
 
@@ -88,15 +95,13 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
 
-    } else if (req.method === 'POST') {
+    } else if (req.method === 'POST' && params.customerId) {
       // Create appointment
-      const appointmentData = await req.json();
-      
       console.log('--- Creating Appointment ---');
-      console.log('Request payload:', JSON.stringify(appointmentData, null, 2));
+      console.log('Request payload:', JSON.stringify(params, null, 2));
       
       // Transform data to match Tekmetric API requirements
-      const scheduledDateTime = `${appointmentData.scheduledDate}T${appointmentData.scheduledTime}`;
+      const scheduledDateTime = `${params.scheduledDate}T${params.scheduledTime}`;
       const startTime = new Date(scheduledDateTime).toISOString();
       
       // Calculate endTime (1 hour after startTime by default)
@@ -106,17 +111,17 @@ serve(async (req) => {
       
       // Map to Tekmetric's expected field names
       const tekmetricPayload: Record<string, any> = {
-        customerId: parseInt(appointmentData.customerId),
-        shopId: parseInt(appointmentData.shopId),
+        customerId: parseInt(params.customerId),
+        shopId: parseInt(params.shopId),
         startTime: startTime,
         endTime: endTime,
-        title: appointmentData.description || appointmentData.title || 'Service Appointment',
-        description: appointmentData.description || '',
+        title: params.description || params.title || 'Service Appointment',
+        description: params.description || '',
       };
       
       // Add vehicleId only if provided
-      if (appointmentData.vehicleId) {
-        tekmetricPayload.vehicleId = parseInt(appointmentData.vehicleId);
+      if (params.vehicleId) {
+        tekmetricPayload.vehicleId = parseInt(params.vehicleId);
       }
       
       console.log('Tekmetric payload:', JSON.stringify(tekmetricPayload, null, 2));
@@ -160,7 +165,7 @@ serve(async (req) => {
           error: errorJson,
           status: response.status,
           endpoint: endpoint,
-          requestPayload: appointmentData,
+          requestPayload: params,
         }), {
           status: response.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

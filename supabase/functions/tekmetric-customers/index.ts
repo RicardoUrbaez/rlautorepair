@@ -41,26 +41,38 @@ serve(async (req) => {
   try {
     const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
     const accessToken = await getAccessToken();
-
-    if (req.method === 'GET') {
-      console.log('Fetching customers from Tekmetric API');
-
-      const url = new URL(req.url);
-      const customerId = url.searchParams.get('customerId');
-      const email = url.searchParams.get('email');
-      const phone = url.searchParams.get('phone');
-      const shopId = url.searchParams.get('shopId') || url.searchParams.get('shop');
-
-      let apiUrl = `https://${baseUrl}/api/v1/customers`;
-      const params = new URLSearchParams();
-      if (shopId) params.append('shop', shopId);
-      if (customerId) params.append('customerId', customerId);
-      if (email) params.append('email', email);
-      if (phone) params.append('phone', phone);
-      
-      if (params.toString()) {
-        apiUrl += `?${params.toString()}`;
+    
+    // Get request body for parameters
+    let params: any = {};
+    if (req.method === 'POST' || req.method === 'GET') {
+      try {
+        const body = await req.text();
+        if (body) {
+          params = JSON.parse(body);
+        }
+      } catch (e) {
+        // No body or invalid JSON, continue with empty params
       }
+    }
+
+    console.log('Fetching customers from Tekmetric API');
+    console.log('Params:', JSON.stringify(params, null, 2));
+
+    const shopId = params.shopId || params.shop || '238'; // Default to test shop
+    const customerId = params.customerId;
+    const email = params.email;
+    const phone = params.phone;
+
+    if (req.method === 'GET' || (req.method === 'POST' && !params.firstName)) {
+      // Fetch customers
+      let apiUrl = `https://${baseUrl}/api/v1/customers`;
+      const urlParams = new URLSearchParams();
+      urlParams.append('shop', shopId);
+      if (customerId) urlParams.append('customerId', customerId);
+      if (email) urlParams.append('email', email);
+      if (phone) urlParams.append('phone', phone);
+      
+      apiUrl += `?${urlParams.toString()}`;
 
       console.log('Fetching from:', apiUrl);
 
@@ -78,19 +90,26 @@ serve(async (req) => {
         throw new Error(`Failed to fetch customers: ${response.status}`);
       }
 
-      const data = await response.json();
+      // Handle empty response
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : { content: [] };
+      } catch (e) {
+        console.log('Empty or invalid JSON response, returning empty array');
+        data = { content: [] };
+      }
+
       console.log(`Successfully fetched ${data.content?.length || data.length || 0} customers`);
 
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
 
-    } else if (req.method === 'POST') {
+    } else if (req.method === 'POST' && params.firstName) {
       // Create customer
-      const customerData = await req.json();
-      
       console.log('--- Creating Customer ---');
-      console.log('Request payload:', JSON.stringify(customerData, null, 2));
+      console.log('Request payload:', JSON.stringify(params, null, 2));
 
       const endpoint = `https://${baseUrl}/api/v1/customers`;
       console.log('POST endpoint:', endpoint);
@@ -101,7 +120,7 @@ serve(async (req) => {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(customerData),
+        body: JSON.stringify(params),
       });
 
       console.log('Response status:', response.status);
