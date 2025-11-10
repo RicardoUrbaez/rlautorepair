@@ -3,6 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { 
   testTekmetricConnection, 
@@ -11,8 +15,10 @@ import {
   triggerTekmetricSync,
   fetchSyncLogs,
   fetchSyncedCustomers,
+  debugTekmetricConnection,
+  createTestAppointment,
 } from "@/lib/tekmetric";
-import { Loader2, CheckCircle, XCircle, RefreshCw, Clock, Database } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, RefreshCw, Clock, Database, AlertTriangle, Bug, Send } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -20,12 +26,24 @@ import Footer from "@/components/Footer";
 export default function TekmetricTest() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [debugging, setDebugging] = useState(false);
+  const [creatingAppointment, setCreatingAppointment] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [appointments, setAppointments] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [syncLogs, setSyncLogs] = useState<any[]>([]);
   const [syncedCustomers, setSyncedCustomers] = useState<any[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  
+  // Test appointment form
+  const [testAppointment, setTestAppointment] = useState({
+    customerId: '',
+    shopId: '',
+    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledTime: '10:00:00',
+    description: 'Test appointment from Lovable frontend',
+  });
 
   useEffect(() => {
     loadSyncData();
@@ -119,6 +137,60 @@ export default function TekmetricTest() {
     }
   };
 
+  const handleDebugConnection = async () => {
+    setDebugging(true);
+    try {
+      toast.info('Running comprehensive diagnostics...');
+      const result = await debugTekmetricConnection();
+      console.log('Debug result:', result);
+      setDebugInfo(result);
+      
+      if (result.status === 'ok') {
+        toast.success('Debug completed! Check results below.');
+        
+        // Auto-fill form with available data
+        if (result.apiTests?.shops?.shopId) {
+          setTestAppointment(prev => ({ ...prev, shopId: result.apiTests.shops.shopId }));
+        }
+        if (result.apiTests?.customers?.sampleCustomer?.id) {
+          setTestAppointment(prev => ({ ...prev, customerId: result.apiTests.customers.sampleCustomer.id }));
+        }
+      } else {
+        toast.error('Debug failed: ' + result.error);
+      }
+    } catch (error) {
+      toast.error('Error debugging: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setDebugging(false);
+    }
+  };
+
+  const handleCreateTestAppointment = async () => {
+    if (!testAppointment.customerId || !testAppointment.shopId) {
+      toast.error('Please provide customer ID and shop ID. Run debug to get available values.');
+      return;
+    }
+
+    setCreatingAppointment(true);
+    try {
+      toast.info('Creating test appointment in Tekmetric...');
+      const result = await createTestAppointment(testAppointment);
+      console.log('Create appointment result:', result);
+      
+      if (result.success) {
+        toast.success(`✅ Appointment created successfully! ID: ${result.data.id}`);
+      } else {
+        toast.error(`❌ Failed: ${result.error?.message || 'Unknown error'}`);
+        console.error('Full error:', result);
+      }
+    } catch (error) {
+      toast.error('Error creating appointment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('Full error:', error);
+    } finally {
+      setCreatingAppointment(false);
+    }
+  };
+
   const getSyncStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
@@ -141,8 +213,163 @@ export default function TekmetricTest() {
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="text-center space-y-2">
             <h1 className="text-4xl font-bold">Tekmetric Integration Dashboard</h1>
-            <p className="text-muted-foreground">Test API connection, sync data, and monitor synchronization status</p>
+            <p className="text-muted-foreground">Debug API connection, test appointments, and monitor sync status</p>
           </div>
+
+          {/* Debug Section */}
+          <Card className="border-2 border-primary">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bug className="h-5 w-5" />
+                    Debug Tekmetric Connection
+                  </CardTitle>
+                  <CardDescription>Run comprehensive diagnostics to identify issues</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button 
+                onClick={handleDebugConnection} 
+                disabled={debugging}
+                className="w-full"
+                size="lg"
+                variant="default"
+              >
+                {debugging ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Running Diagnostics...
+                  </>
+                ) : (
+                  <>
+                    <Bug className="mr-2 h-5 w-5" />
+                    Run Full Diagnostics
+                  </>
+                )}
+              </Button>
+
+              {debugInfo && (
+                <div className="space-y-4">
+                  <Alert className={debugInfo.environment === 'sandbox' ? 'border-yellow-500' : 'border-green-500'}>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Environment: {debugInfo.environment?.toUpperCase()}</AlertTitle>
+                    <AlertDescription className="space-y-2">
+                      <p className="font-mono text-xs">{debugInfo.baseUrl}</p>
+                      {debugInfo.recommendations?.map((rec: string, idx: number) => (
+                        <p key={idx} className="text-sm">{rec}</p>
+                      ))}
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className={`p-4 rounded-lg border-2 ${debugInfo.apiTests?.shops?.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
+                      <p className="text-xs font-medium text-muted-foreground">Shops API</p>
+                      <p className="text-2xl font-bold">{debugInfo.apiTests?.shops?.success ? '✅' : '❌'}</p>
+                      <p className="text-xs">{debugInfo.apiTests?.shops?.count || 0} shops found</p>
+                    </div>
+                    <div className={`p-4 rounded-lg border-2 ${debugInfo.apiTests?.customers?.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
+                      <p className="text-xs font-medium text-muted-foreground">Customers API</p>
+                      <p className="text-2xl font-bold">{debugInfo.apiTests?.customers?.success ? '✅' : '❌'}</p>
+                      <p className="text-xs">{debugInfo.apiTests?.customers?.count || 0} customers</p>
+                    </div>
+                    <div className={`p-4 rounded-lg border-2 ${debugInfo.apiTests?.appointments?.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
+                      <p className="text-xs font-medium text-muted-foreground">Appointments API</p>
+                      <p className="text-2xl font-bold">{debugInfo.apiTests?.appointments?.success ? '✅' : '❌'}</p>
+                      <p className="text-xs">{debugInfo.apiTests?.appointments?.count || 0} appointments</p>
+                    </div>
+                  </div>
+
+                  <details className="bg-muted p-4 rounded-lg">
+                    <summary className="cursor-pointer font-medium">View Raw Debug Data</summary>
+                    <pre className="text-xs mt-2 overflow-x-auto">{JSON.stringify(debugInfo, null, 2)}</pre>
+                  </details>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Test Appointment Creation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Create Test Appointment
+              </CardTitle>
+              <CardDescription>Send a test appointment to Tekmetric to verify POST endpoint</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerId">Customer ID *</Label>
+                  <Input
+                    id="customerId"
+                    value={testAppointment.customerId}
+                    onChange={(e) => setTestAppointment({ ...testAppointment, customerId: e.target.value })}
+                    placeholder="e.g., 12345"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shopId">Shop ID *</Label>
+                  <Input
+                    id="shopId"
+                    value={testAppointment.shopId}
+                    onChange={(e) => setTestAppointment({ ...testAppointment, shopId: e.target.value })}
+                    placeholder="e.g., 67890"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="scheduledDate">Date</Label>
+                  <Input
+                    id="scheduledDate"
+                    type="date"
+                    value={testAppointment.scheduledDate}
+                    onChange={(e) => setTestAppointment({ ...testAppointment, scheduledDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="scheduledTime">Time</Label>
+                  <Input
+                    id="scheduledTime"
+                    type="time"
+                    value={testAppointment.scheduledTime}
+                    onChange={(e) => setTestAppointment({ ...testAppointment, scheduledTime: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={testAppointment.description}
+                  onChange={(e) => setTestAppointment({ ...testAppointment, description: e.target.value })}
+                  rows={2}
+                />
+              </div>
+              <Button 
+                onClick={handleCreateTestAppointment}
+                disabled={creatingAppointment || !testAppointment.customerId || !testAppointment.shopId}
+                className="w-full"
+                size="lg"
+              >
+                {creatingAppointment ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Creating Appointment...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-5 w-5" />
+                    Create Test Appointment
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                💡 Tip: Run diagnostics first to auto-fill customer and shop IDs
+              </p>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

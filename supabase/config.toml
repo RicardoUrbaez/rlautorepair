@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.sync-tekmetric]
 verify_jwt = false
+
+[functions.tekmetric-debug]
+verify_jwt = false
