@@ -74,7 +74,7 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 
 ## Tekmetric API Integration
 
-This project includes a complete integration with the Tekmetric API.
+This project includes a complete integration with the Tekmetric API and automatic data synchronization to Supabase.
 
 ### Environment Variables
 
@@ -86,18 +86,44 @@ The following secrets are configured in Lovable Cloud:
 
 ### Available Edge Functions
 
+#### API Access Functions
 - **tekmetric-ping** - Test API connection and authentication
 - **tekmetric-appointments** - Fetch and create appointments (GET/POST)
 - **tekmetric-customers** - Fetch customer data (GET)
 - **tekmetric-auth** - Get OAuth access token
 
+#### Data Sync Function
+- **sync-tekmetric** - Synchronizes Tekmetric data to Supabase
+  - Syncs customers to `tekmetric_customers` table
+  - Syncs appointments to `appointments` table
+  - Creates detailed sync logs in `sync_logs` table
+  - Can be triggered manually or runs automatically
+
+### Database Tables
+
+The following tables store synced Tekmetric data:
+
+- **tekmetric_customers** - Customer information from Tekmetric
+- **tekmetric_orders** - Repair orders/invoices (ready for future use)
+- **sync_logs** - History of all sync operations with status and metrics
+
+### Automatic Synchronization
+
+A scheduled job runs **daily at midnight (UTC)** to automatically sync data from Tekmetric to Supabase. This provides:
+
+- **Live backup** of your Tekmetric data
+- **Analytics layer** for custom reporting
+- **Offline access** to critical business data
+- **Audit trail** via sync logs
+
 ### Testing the Integration
 
-Visit `/tekmetric-test` in your application to test the Tekmetric API integration:
+Visit `/tekmetric-test` in your application to:
 
-1. Test the connection to verify credentials
-2. Fetch appointments from Tekmetric
-3. Fetch customers from Tekmetric
+1. **Test Connection** - Verify Tekmetric API credentials
+2. **Sync Now** - Manually trigger a full data sync
+3. **View Sync History** - See past sync operations with status
+4. **Compare Data** - View live Tekmetric data vs synced Supabase data
 
 ### Using the API in Your Code
 
@@ -108,31 +134,34 @@ import {
   testTekmetricConnection,
   fetchTekmetricAppointments,
   createTekmetricAppointment,
-  fetchTekmetricCustomers 
+  fetchTekmetricCustomers,
+  triggerTekmetricSync,
+  fetchSyncLogs,
+  fetchSyncedCustomers,
+  fetchSyncedOrders
 } from "@/lib/tekmetric";
 
 // Test connection
 const result = await testTekmetricConnection();
 
-// Fetch appointments
-const appointments = await fetchTekmetricAppointments({
-  shopId: "your-shop-id",
-  startDate: "2024-01-01",
-  endDate: "2024-12-31"
-});
+// Trigger manual sync
+const syncResult = await triggerTekmetricSync();
 
-// Create appointment
-const newAppointment = await createTekmetricAppointment({
-  customerId: "customer-id",
-  shopId: "shop-id",
-  scheduledDate: "2024-01-15",
-  scheduledTime: "10:00:00"
-});
+// Get sync history
+const logs = await fetchSyncLogs(10);
 
-// Fetch customers
-const customers = await fetchTekmetricCustomers();
+// Fetch synced customers from Supabase
+const customers = await fetchSyncedCustomers();
 ```
+
+### Sync Monitoring
+
+Monitor sync operations through:
+
+- **Dashboard**: `/tekmetric-test` page shows real-time sync status
+- **Database**: Query `sync_logs` table for detailed history
+- **Last Sync Time**: Displayed prominently in the UI
 
 ### Security
 
-All API credentials are stored securely as environment variables in Lovable Cloud and are never exposed to the frontend. The edge functions handle all authentication and API communication server-side.
+All API credentials are stored securely as environment variables in Lovable Cloud and are never exposed to the frontend. The edge functions handle all authentication and API communication server-side. RLS policies ensure only admins can access synced data.
