@@ -40,7 +40,10 @@ serve(async (req) => {
     const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
     const accessToken = await getAccessToken();
 
-    console.log(`Processing ${req.method} request for appointments`);
+    console.log('=== TEKMETRIC APPOINTMENTS REQUEST ===');
+    console.log(`Method: ${req.method}`);
+    console.log(`Base URL: ${baseUrl}`);
+    console.log(`Environment: ${baseUrl?.includes('sandbox') ? 'SANDBOX' : 'PRODUCTION'}`);
 
     if (req.method === 'GET') {
       // Fetch appointments
@@ -85,9 +88,19 @@ serve(async (req) => {
     } else if (req.method === 'POST') {
       // Create appointment
       const appointmentData = await req.json();
-      console.log('Creating appointment:', appointmentData);
+      
+      console.log('--- Creating Appointment ---');
+      console.log('Request payload:', JSON.stringify(appointmentData, null, 2));
+      console.log('Required fields check:');
+      console.log('  - customerId:', appointmentData.customerId ? '✅' : '❌ MISSING');
+      console.log('  - shopId:', appointmentData.shopId ? '✅' : '❌ MISSING');
+      console.log('  - scheduledDate:', appointmentData.scheduledDate ? '✅' : '❌ MISSING');
+      console.log('  - scheduledTime:', appointmentData.scheduledTime ? '✅' : '❌ MISSING');
 
-      const response = await fetch(`https://${baseUrl}/api/v1/appointments`, {
+      const endpoint = `https://${baseUrl}/api/v1/appointments`;
+      console.log('POST endpoint:', endpoint);
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -96,16 +109,44 @@ serve(async (req) => {
         body: JSON.stringify(appointmentData),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Failed to create appointment:', errorText);
-        throw new Error(`Failed to create appointment: ${response.status}`);
+        console.error('❌ Failed to create appointment');
+        console.error('Status:', response.status);
+        console.error('Error body:', errorText);
+        
+        let errorJson;
+        try {
+          errorJson = JSON.parse(errorText);
+        } catch {
+          errorJson = { message: errorText };
+        }
+
+        return new Response(JSON.stringify({
+          success: false,
+          error: errorJson,
+          status: response.status,
+          endpoint: endpoint,
+          requestPayload: appointmentData,
+        }), {
+          status: response.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const data = await response.json();
-      console.log('Successfully created appointment:', data.id);
+      console.log('✅ Successfully created appointment');
+      console.log('Appointment ID:', data.id);
+      console.log('Response data:', JSON.stringify(data, null, 2));
 
-      return new Response(JSON.stringify(data), {
+      return new Response(JSON.stringify({
+        success: true,
+        data: data,
+        message: 'Appointment created successfully',
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

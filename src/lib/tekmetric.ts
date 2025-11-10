@@ -114,6 +114,45 @@ export async function triggerTekmetricSync() {
 }
 
 /**
+ * Get comprehensive debug information about Tekmetric connection
+ */
+export async function debugTekmetricConnection() {
+  try {
+    const { data, error } = await supabase.functions.invoke('tekmetric-debug');
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error debugging Tekmetric connection:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a test appointment in Tekmetric
+ */
+export async function createTestAppointment(payload: {
+  customerId: string | number;
+  shopId: string | number;
+  scheduledDate: string;
+  scheduledTime: string;
+  description?: string;
+  vehicleId?: string | number;
+}) {
+  try {
+    const { data, error } = await supabase.functions.invoke('tekmetric-appointments', {
+      body: payload,
+    });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating test appointment:', error);
+    throw error;
+  }
+}
+
+/**
  * Fetch sync logs from Supabase
  */
 export async function fetchSyncLogs(limit = 10) {
