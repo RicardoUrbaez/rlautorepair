@@ -94,11 +94,38 @@ serve(async (req) => {
       
       console.log('--- Creating Appointment ---');
       console.log('Request payload:', JSON.stringify(appointmentData, null, 2));
+      
+      // Transform data to match Tekmetric API requirements
+      const scheduledDateTime = `${appointmentData.scheduledDate}T${appointmentData.scheduledTime}`;
+      const startTime = new Date(scheduledDateTime).toISOString();
+      
+      // Calculate endTime (1 hour after startTime by default)
+      const endTimeDate = new Date(scheduledDateTime);
+      endTimeDate.setHours(endTimeDate.getHours() + 1);
+      const endTime = endTimeDate.toISOString();
+      
+      // Map to Tekmetric's expected field names
+      const tekmetricPayload: Record<string, any> = {
+        customerId: parseInt(appointmentData.customerId),
+        shopId: parseInt(appointmentData.shopId),
+        startTime: startTime,
+        endTime: endTime,
+        title: appointmentData.description || appointmentData.title || 'Service Appointment',
+        description: appointmentData.description || '',
+      };
+      
+      // Add vehicleId only if provided
+      if (appointmentData.vehicleId) {
+        tekmetricPayload.vehicleId = parseInt(appointmentData.vehicleId);
+      }
+      
+      console.log('Tekmetric payload:', JSON.stringify(tekmetricPayload, null, 2));
       console.log('Required fields check:');
-      console.log('  - customerId:', appointmentData.customerId ? '✅' : '❌ MISSING');
-      console.log('  - shopId:', appointmentData.shopId ? '✅' : '❌ MISSING');
-      console.log('  - scheduledDate:', appointmentData.scheduledDate ? '✅' : '❌ MISSING');
-      console.log('  - scheduledTime:', appointmentData.scheduledTime ? '✅' : '❌ MISSING');
+      console.log('  - customerId:', tekmetricPayload.customerId ? '✅' : '❌ MISSING');
+      console.log('  - shopId:', tekmetricPayload.shopId ? '✅' : '❌ MISSING');
+      console.log('  - startTime:', tekmetricPayload.startTime ? '✅' : '❌ MISSING');
+      console.log('  - endTime:', tekmetricPayload.endTime ? '✅' : '❌ MISSING');
+      console.log('  - title:', tekmetricPayload.title ? '✅' : '❌ MISSING');
 
       const endpoint = `https://${baseUrl}/api/v1/appointments`;
       console.log('POST endpoint:', endpoint);
@@ -109,7 +136,7 @@ serve(async (req) => {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(appointmentData),
+        body: JSON.stringify(tekmetricPayload),
       });
 
       console.log('Response status:', response.status);
