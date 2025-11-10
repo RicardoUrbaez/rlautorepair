@@ -71,3 +71,68 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Tekmetric API Integration
+
+This project includes a complete integration with the Tekmetric API.
+
+### Environment Variables
+
+The following secrets are configured in Lovable Cloud:
+
+- `TEKMETRIC_CLIENT_ID` - Your Tekmetric client ID
+- `TEKMETRIC_CLIENT_SECRET` - Your Tekmetric client secret
+- `TEKMETRIC_BASE_URL` - Tekmetric API base URL (e.g., sandbox.tekmetric.com)
+
+### Available Edge Functions
+
+- **tekmetric-ping** - Test API connection and authentication
+- **tekmetric-appointments** - Fetch and create appointments (GET/POST)
+- **tekmetric-customers** - Fetch customer data (GET)
+- **tekmetric-auth** - Get OAuth access token
+
+### Testing the Integration
+
+Visit `/tekmetric-test` in your application to test the Tekmetric API integration:
+
+1. Test the connection to verify credentials
+2. Fetch appointments from Tekmetric
+3. Fetch customers from Tekmetric
+
+### Using the API in Your Code
+
+Import the helper functions from `@/lib/tekmetric`:
+
+```typescript
+import { 
+  testTekmetricConnection,
+  fetchTekmetricAppointments,
+  createTekmetricAppointment,
+  fetchTekmetricCustomers 
+} from "@/lib/tekmetric";
+
+// Test connection
+const result = await testTekmetricConnection();
+
+// Fetch appointments
+const appointments = await fetchTekmetricAppointments({
+  shopId: "your-shop-id",
+  startDate: "2024-01-01",
+  endDate: "2024-12-31"
+});
+
+// Create appointment
+const newAppointment = await createTekmetricAppointment({
+  customerId: "customer-id",
+  shopId: "shop-id",
+  scheduledDate: "2024-01-15",
+  scheduledTime: "10:00:00"
+});
+
+// Fetch customers
+const customers = await fetchTekmetricCustomers();
+```
+
+### Security
+
+All API credentials are stored securely as environment variables in Lovable Cloud and are never exposed to the frontend. The edge functions handle all authentication and API communication server-side.
