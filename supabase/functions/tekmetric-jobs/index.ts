@@ -40,27 +40,35 @@ serve(async (req) => {
   try {
     const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
     const accessToken = await getAccessToken();
+    
+    // Get request body for parameters
+    let params: any = {};
+    try {
+      const body = await req.text();
+      if (body) {
+        params = JSON.parse(body);
+      }
+    } catch (e) {
+      // No body or invalid JSON, continue with empty params
+    }
 
     console.log('=== TEKMETRIC JOBS REQUEST ===');
-    console.log(`Method: ${req.method}`);
+    console.log('Params:', JSON.stringify(params, null, 2));
 
-    // Fetch repair orders (jobs)
-    const url = new URL(req.url);
-    const shopId = url.searchParams.get('shopId') || url.searchParams.get('shop');
-    const status = url.searchParams.get('status');
-    const startDate = url.searchParams.get('startDate');
-    const endDate = url.searchParams.get('endDate');
+    // Fetch repair orders (jobs) - try /jobs endpoint instead of /repair-orders
+    const shopId = params.shopId || params.shop || '238';
+    const status = params.status;
+    const startDate = params.startDate;
+    const endDate = params.endDate;
 
-    let apiUrl = `https://${baseUrl}/api/v1/repair-orders`;
-    const params = new URLSearchParams();
-    if (shopId) params.append('shop', shopId);
-    if (status) params.append('status', status);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
+    let apiUrl = `https://${baseUrl}/api/v1/jobs`;
+    const urlParams = new URLSearchParams();
+    urlParams.append('shop', shopId);
+    if (status) urlParams.append('status', status);
+    if (startDate) urlParams.append('startDate', startDate);
+    if (endDate) urlParams.append('endDate', endDate);
     
-    if (params.toString()) {
-      apiUrl += `?${params.toString()}`;
-    }
+    apiUrl += `?${urlParams.toString()}`;
 
     console.log('Fetching jobs from:', apiUrl);
 

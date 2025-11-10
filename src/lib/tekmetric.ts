@@ -43,13 +43,9 @@ export async function fetchTekmetricAppointments(params?: {
   endDate?: string;
 }) {
   try {
-    const queryParams = new URLSearchParams();
-    if (params?.shopId) queryParams.append('shopId', params.shopId);
-    if (params?.startDate) queryParams.append('startDate', params.startDate);
-    if (params?.endDate) queryParams.append('endDate', params.endDate);
-
     const { data, error } = await supabase.functions.invoke('tekmetric-appointments', {
       method: 'GET',
+      body: params || {},
     });
     
     if (error) throw error;
@@ -87,7 +83,16 @@ export async function fetchTekmetricCustomers(params?: {
   shopId?: string;
 }) {
   try {
-    const { data, error } = await supabase.functions.invoke('tekmetric-customers');
+    const queryParams = new URLSearchParams();
+    if (params?.shopId) queryParams.append('shopId', params.shopId);
+    if (params?.customerId) queryParams.append('customerId', params.customerId);
+    if (params?.email) queryParams.append('email', params.email);
+    if (params?.phone) queryParams.append('phone', params.phone);
+
+    const { data, error } = await supabase.functions.invoke('tekmetric-customers', {
+      method: 'GET',
+      body: params || {},
+    });
     
     if (error) throw error;
     return data;
@@ -172,8 +177,10 @@ export async function fetchTekmetricJobs(params?: {
   endDate?: string;
 }) {
   try {
-    const { data, error } = await supabase.functions.invoke('tekmetric-jobs');
-    
+    const { data, error } = await supabase.functions.invoke('tekmetric-jobs', {
+      body: params || {},
+    });
+
     if (error) throw error;
     return data;
   } catch (error) {
