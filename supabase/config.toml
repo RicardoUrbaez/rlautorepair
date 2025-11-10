@@ -1,1 +1,13 @@
 project_id = "dgjwdzvuxdddzwqswoaz"
+
+[functions.tekmetric-ping]
+verify_jwt = false
+
+[functions.tekmetric-auth]
+verify_jwt = false
+
+[functions.tekmetric-appointments]
+verify_jwt = false
+
+[functions.tekmetric-customers]
+verify_jwt = false
