@@ -174,6 +174,11 @@ const BookAppointment = () => {
 
       if (error) throw error;
 
+      // Sync to Tekmetric (non-blocking - runs in background)
+      syncToTekmetric(values, appointments).catch(err => {
+        console.error('Background Tekmetric sync failed:', err);
+      });
+
       toast.success("Appointment(s) booked successfully! We'll contact you soon.");
       form.reset();
       setSelectedServices([""]);
@@ -189,6 +194,62 @@ const BookAppointment = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const syncToTekmetric = async (values: z.infer<typeof formSchema>, appointments: any[]) => {
+    try {
+      // Import Tekmetric helpers
+      const { findOrCreateCustomer, createTekmetricAppointment } = await import("@/lib/tekmetric");
+      
+      const SHOP_ID = "238"; // From debug - Sandbox shop ID
+      
+      // Split customer name
+      const nameParts = values.customer_name.trim().split(' ');
+      const firstName = nameParts[0] || 'Customer';
+      const lastName = nameParts.slice(1).join(' ') || 'Name';
+
+      // Find or create customer in Tekmetric
+      const { customer } = await findOrCreateCustomer({
+        shopId: SHOP_ID,
+        email: values.customer_email,
+        phone: values.customer_phone,
+        firstName,
+        lastName,
+        address: values.street_address,
+        city: values.city,
+        state: values.state,
+        zip: values.zip_code,
+      });
+
+      console.log('Tekmetric customer ready:', customer.id);
+
+      // Create appointment in Tekmetric for first service
+      const appointmentData = {
+        customerId: customer.id,
+        shopId: SHOP_ID,
+        scheduledDate: values.appointment_date,
+        scheduledTime: values.appointment_time + ':00',
+        title: `${values.vehicle_year} ${values.vehicle_make} ${values.vehicle_model}`,
+        description: values.notes || `Service appointment for ${values.vehicle_make} ${values.vehicle_model}`,
+        startTime: values.appointment_time + ':00',
+        endTime: calculateEndTime(values.appointment_time),
+      };
+
+      const result = await createTekmetricAppointment(appointmentData);
+      
+      if (result.success) {
+        console.log('✅ Synced to Tekmetric:', result.data.id);
+      }
+    } catch (error) {
+      console.error('Tekmetric sync error:', error);
+      // Don't throw - this is background operation
+    }
+  };
+
+  const calculateEndTime = (startTime: string): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endHour = (hours + 1) % 24;
+    return `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
   };
 
   const today = new Date().toISOString().split("T")[0];
