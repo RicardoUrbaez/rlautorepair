@@ -17,6 +17,7 @@ import {
   fetchSyncedCustomers,
   debugTekmetricConnection,
   createTestAppointment,
+  getTekmetricEnvironment,
 } from "@/lib/tekmetric";
 import { Loader2, CheckCircle, XCircle, RefreshCw, Clock, Database, AlertTriangle, Bug, Send } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -35,6 +36,10 @@ export default function TekmetricTest() {
   const [syncedCustomers, setSyncedCustomers] = useState<any[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [environment, setEnvironment] = useState<{
+    environment: string;
+    baseUrl: string | null;
+  } | null>(null);
   
   // Test appointment form
   const [testAppointment, setTestAppointment] = useState({
@@ -47,7 +52,17 @@ export default function TekmetricTest() {
 
   useEffect(() => {
     loadSyncData();
+    loadEnvironment();
   }, []);
+
+  const loadEnvironment = async () => {
+    try {
+      const envData = await getTekmetricEnvironment();
+      setEnvironment(envData);
+    } catch (error) {
+      console.error('Error loading environment:', error);
+    }
+  };
 
   const loadSyncData = async () => {
     try {
@@ -215,6 +230,39 @@ export default function TekmetricTest() {
             <h1 className="text-4xl font-bold">Tekmetric Integration Dashboard</h1>
             <p className="text-muted-foreground">Debug API connection, test appointments, and monitor sync status</p>
           </div>
+
+          {/* Environment Banner */}
+          {environment && (
+            <div className={`p-4 text-center rounded-lg font-medium text-lg border-2 ${
+              environment.environment === 'sandbox' 
+                ? 'bg-yellow-50 text-yellow-900 border-yellow-400' 
+                : environment.environment === 'production' 
+                ? 'bg-green-50 text-green-900 border-green-400' 
+                : 'bg-gray-50 text-gray-900 border-gray-400'
+            }`}>
+              {environment.environment === 'sandbox' && (
+                <div className="flex items-center justify-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span>⚠️ Sandbox Environment — Data will not appear on tekmetric.com</span>
+                </div>
+              )}
+              {environment.environment === 'production' && (
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  <span>✅ Live Environment — Data synced with tekmetric.com</span>
+                </div>
+              )}
+              {environment.environment === 'unknown' && (
+                <div className="flex items-center justify-center gap-2">
+                  <XCircle className="h-5 w-5" />
+                  <span>❓ Environment not detected</span>
+                </div>
+              )}
+              {environment.baseUrl && (
+                <p className="text-xs mt-1 opacity-75 font-mono">{environment.baseUrl}</p>
+              )}
+            </div>
+          )}
 
           {/* Debug Section */}
           <Card className="border-2 border-primary">

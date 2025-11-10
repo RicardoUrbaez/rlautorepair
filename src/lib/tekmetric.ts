@@ -129,6 +129,21 @@ export async function debugTekmetricConnection() {
 }
 
 /**
+ * Get current Tekmetric environment (sandbox vs production)
+ */
+export async function getTekmetricEnvironment() {
+  try {
+    const { data, error } = await supabase.functions.invoke('tekmetric-environment');
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error getting Tekmetric environment:', error);
+    throw error;
+  }
+}
+
+/**
  * Create a test appointment in Tekmetric
  */
 export async function createTestAppointment(payload: {
