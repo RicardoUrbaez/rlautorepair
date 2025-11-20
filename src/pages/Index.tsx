@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import heroBanner from "@/assets/hero-banner.jpg";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 import { GlareHover } from "@/components/ui/glare-hover";
+import { PrismaticBurstTrigger } from "@/components/ui/prismatic-burst";
 
 const Index = () => {
   const featuresSection = useScrollAnimation();
@@ -60,15 +61,19 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: "0.4s" }}>
             <Link to="/book">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground glow-effect text-lg px-8">
-                Book Your Appointment Now
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              <PrismaticBurstTrigger particleCount={30} size={10}>
+                <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground glow-effect text-lg px-8">
+                  Book Your Appointment Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </PrismaticBurstTrigger>
             </Link>
             <Link to="/services">
-              <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8">
-                View Services
-              </Button>
+              <PrismaticBurstTrigger particleCount={30} size={10}>
+                <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8">
+                  View Services
+                </Button>
+              </PrismaticBurstTrigger>
             </Link>
           </div>
         </div>
