@@ -28,6 +28,7 @@ import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getAllMakes, getAllModels, getAllYears, getModelsForMakeAndYear } from "@/data/vehicleData";
+import { GlareHover } from "@/components/ui/glare-hover";
 
 const formSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -267,9 +268,10 @@ const BookAppointment = () => {
             </p>
           </div>
 
-          <Card className="p-8">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <GlareHover>
+            <Card className="p-8">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Contact Information */}
                 <div className="space-y-4">
                   <h3 className="text-xl font-bold flex items-center gap-2">
@@ -601,6 +603,7 @@ const BookAppointment = () => {
               </form>
             </Form>
           </Card>
+          </GlareHover>
         </div>
       </section>
 
