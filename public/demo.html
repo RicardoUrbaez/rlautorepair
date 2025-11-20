@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RL Auto Repair - Professional automotive service and repair">
+    <title>RL Auto Repair - Demo Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 40px 0;
+        }
+
+        .service-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 24px;
+            border-radius: 8px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .service-card h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.4em;
+        }
+
+        .service-card p {
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .cta-section h2 {
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stat-number {
+            font-size: 3em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1.1em;
+            margin-top: 8px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏁 RL Auto Repair</h1>
+            <p class="tagline">Your Trusted Automotive Service Partner</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="customers">0</div>
+                <div class="stat-label">Happy Customers</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="repairs">0</div>
+                <div class="stat-label">Repairs Completed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="experience">0</div>
+                <div class="stat-label">Years Experience</div>
+            </div>
+        </div>
+
+        <div class="service-grid" id="serviceGrid">
+            <!-- Services will be dynamically loaded -->
+        </div>
+
+        <div class="cta-section">
+            <h2>Ready to Get Started?</h2>
+            <p style="margin-bottom: 24px; font-size: 1.1em;">Book your appointment today and experience premium automotive care</p>
+            <button class="btn" onclick="handleBooking()">Book Appointment</button>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 RL Auto Repair. All rights reserved.</p>
+            <p>Demonstration Page - Portfolio Project</p>
+        </footer>
+    </div>
+
+    <script>
+        // Service data
+        const services = [
+            {
+                title: 'Oil Change',
+                description: 'Regular oil changes keep your engine running smoothly and extend its lifespan. We use premium oils and filters.'
+            },
+            {
+                title: 'Brake Service',
+                description: 'Complete brake inspection and repair services. Your safety is our priority with quality brake components.'
+            },
+            {
+                title: 'Engine Diagnostics',
+                description: 'Advanced computer diagnostics to identify and resolve engine issues quickly and accurately.'
+            },
+            {
+                title: 'Tire Service',
+                description: 'Tire rotation, balancing, alignment, and replacement. Keep your vehicle handling at its best.'
+            },
+            {
+                title: 'AC Repair',
+                description: 'Climate control system repair and maintenance. Stay comfortable in any weather.'
+            },
+            {
+                title: 'Transmission Service',
+                description: 'Expert transmission repair and maintenance to ensure smooth shifting and reliability.'
+            }
+        ];
+
+        // Animate counters
+        function animateCounter(id, target, duration) {
+            const element = document.getElementById(id);
+            let current = 0;
+            const increment = target / (duration / 16);
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current);
+                }
+            }, 16);
+        }
+
+        // Load services dynamically
+        function loadServices() {
+            const grid = document.getElementById('serviceGrid');
+            services.forEach(service => {
+                const card = document.createElement('div');
+                card.className = 'service-card';
+                card.innerHTML = `
+                    <h3>${service.title}</h3>
+                    <p>${service.description}</p>
+                `;
+                card.addEventListener('click', () => {
+                    alert(`Learn more about ${service.title}`);
+                });
+                grid.appendChild(card);
+            });
+        }
+
+        // Handle booking
+        function handleBooking() {
+            const name = prompt('Enter your name:');
+            if (name) {
+                alert(`Thank you, ${name}! We'll contact you shortly to schedule your appointment.`);
+                console.log('Booking request from:', name);
+            }
+        }
+
+        // Initialize page
+        window.addEventListener('load', () => {
+            animateCounter('customers', 5000, 2000);
+            animateCounter('repairs', 12000, 2000);
+            animateCounter('experience', 15, 2000);
+            loadServices();
+        });
+    </script>
+</body>
+</html>
