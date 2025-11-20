@@ -8,6 +8,7 @@ import heroBanner from "@/assets/hero-banner.jpg";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 import { GlareHover } from "@/components/ui/glare-hover";
 import { PrismaticBurstTrigger } from "@/components/ui/prismatic-burst";
+import { Hyperspeed } from "@/components/ui/hyperspeed";
 
 const Index = () => {
   const featuresSection = useScrollAnimation();
@@ -33,6 +34,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Hyperspeed />
       <Navbar />
 
       {/* Hero Section */}
