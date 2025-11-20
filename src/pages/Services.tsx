@@ -70,13 +70,10 @@ const Services = () => {
                   className="p-6 hover:shadow-xl smooth-transition border-2 hover:border-accent animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start mb-4">
                     <div className="inline-flex items-center justify-center w-12 h-12 bg-accent/10 rounded-lg">
                       <Wrench className="h-6 w-6 text-accent" />
                     </div>
-                    <span className="text-2xl font-bold text-accent">
-                      ${service.price.toFixed(2)}
-                    </span>
                   </div>
 
                   <h3 className="text-xl font-bold mb-3">{service.name}</h3>
