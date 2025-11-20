@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import heroBanner from "@/assets/hero-banner.jpg";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { GlareHover } from "@/components/ui/glare-hover";
 
 const Index = () => {
   const featuresSection = useScrollAnimation();
@@ -84,21 +85,22 @@ const Index = () => {
           <h2 className="text-4xl font-display font-bold text-center mb-12">Why Choose R&L Auto Repair?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card
-                key={index}
-                className={`p-8 text-center hover:shadow-xl smooth-transition border-2 hover:border-accent transition-all duration-700 ${
-                  featuresSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-                }`}
-                style={{ 
-                  transitionDelay: featuresSection.isVisible ? `${index * 150}ms` : "0ms"
-                }}
-              >
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-accent/10 rounded-full mb-4">
-                  <feature.icon className="h-8 w-8 text-accent" />
-                </div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </Card>
+              <GlareHover key={index}>
+                <Card
+                  className={`p-8 text-center hover:shadow-xl smooth-transition border-2 hover:border-accent transition-all duration-700 ${
+                    featuresSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+                  }`}
+                  style={{ 
+                    transitionDelay: featuresSection.isVisible ? `${index * 150}ms` : "0ms"
+                  }}
+                >
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-accent/10 rounded-full mb-4">
+                    <feature.icon className="h-8 w-8 text-accent" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                  <p className="text-muted-foreground">{feature.description}</p>
+                </Card>
+              </GlareHover>
             ))}
           </div>
         </div>
