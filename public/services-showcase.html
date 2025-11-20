@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RL Auto Repair Services - Comprehensive automotive repair services">
+    <title>Services - RL Auto Repair</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to bottom, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid #e94560;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #e94560;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .services-container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .service-card {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(233, 69, 96, 0.2);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            border-color: #e94560;
+            box-shadow: 0 12px 40px rgba(233, 69, 96, 0.4);
+        }
+
+        .service-icon {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .service-card h2 {
+            color: #e94560;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .service-card p {
+            line-height: 1.8;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .price-tag {
+            background: #e94560;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .features-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .features-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .features-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #e94560;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .cta-button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .cta-button:hover {
+            background: #ff6584;
+            transform: scale(1.05);
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔧 Our Premium Services</h1>
+        <p style="margin-top: 10px; font-size: 1.2em;">Expert automotive care for every need</p>
+    </header>
+
+    <div class="services-container" id="servicesContainer">
+        <!-- Services will be dynamically loaded here -->
+    </div>
+
+    <footer>
+        <p>&copy; 2025 RL Auto Repair | All Rights Reserved</p>
+    </footer>
+
+    <script>
+        const services = [
+            {
+                icon: '🛢️',
+                title: 'Oil Change & Filter',
+                description: 'Keep your engine running smoothly with our premium oil change service using high-quality synthetic oils.',
+                price: 'From $49.99',
+                features: ['Synthetic oil options', 'Filter replacement', 'Multi-point inspection', '15-minute service']
+            },
+            {
+                icon: '🔩',
+                title: 'Brake Service',
+                description: 'Complete brake system inspection and repair. Your safety is our top priority.',
+                price: 'From $129.99',
+                features: ['Pad replacement', 'Rotor inspection', 'Fluid check', 'Performance testing']
+            },
+            {
+                icon: '⚙️',
+                title: 'Engine Diagnostics',
+                description: 'Advanced computer diagnostics to identify and resolve any engine issues quickly.',
+                price: 'From $89.99',
+                features: ['OBD-II scanning', 'Error code analysis', 'Performance check', 'Detailed report']
+            },
+            {
+                icon: '🏎️',
+                title: 'Transmission Service',
+                description: 'Expert transmission maintenance and repair to ensure smooth shifting and longevity.',
+                price: 'From $179.99',
+                features: ['Fluid replacement', 'Filter service', 'Leak inspection', 'Road test']
+            },
+            {
+                icon: '❄️',
+                title: 'AC Repair',
+                description: 'Stay cool with our climate control system repair and recharge services.',
+                price: 'From $99.99',
+                features: ['Refrigerant recharge', 'Leak detection', 'Component testing', 'Performance check']
+            },
+            {
+                icon: '🔋',
+                title: 'Battery & Electrical',
+                description: 'Complete electrical system diagnostics and battery replacement services.',
+                price: 'From $79.99',
+                features: ['Battery testing', 'Alternator check', 'Starter inspection', 'Free installation']
+            },
+            {
+                icon: '🚗',
+                title: 'Tire Service',
+                description: 'Professional tire rotation, balancing, and alignment services.',
+                price: 'From $59.99',
+                features: ['Rotation & balance', 'Pressure check', 'Tread inspection', 'Alignment available']
+            },
+            {
+                icon: '🔍',
+                title: 'Pre-Purchase Inspection',
+                description: 'Comprehensive vehicle inspection before you buy. Make informed decisions.',
+                price: '$149.99',
+                features: ['150+ point inspection', 'Detailed report', 'Photo documentation', 'Value assessment']
+            }
+        ];
+
+        function loadServices() {
+            const container = document.getElementById('servicesContainer');
+            
+            services.forEach((service, index) => {
+                const card = document.createElement('div');
+                card.className = 'service-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                card.innerHTML = `
+                    <div class="service-icon">${service.icon}</div>
+                    <h2>${service.title}</h2>
+                    <p>${service.description}</p>
+                    <ul class="features-list">
+                        ${service.features.map(feature => `<li>${feature}</li>`).join('')}
+                    </ul>
+                    <div class="price-tag">${service.price}</div>
+                    <button class="cta-button" onclick="bookService('${service.title}')">
+                        Book Now
+                    </button>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function bookService(serviceName) {
+            alert(`Booking request for: ${serviceName}\n\nYou will be redirected to our booking page.`);
+            console.log('Booking service:', serviceName);
+        }
+
+        // Load services on page load
+        window.addEventListener('load', loadServices);
+    </script>
+</body>
+</html>

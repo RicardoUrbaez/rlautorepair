@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RL Auto Repair Gallery - See our work and facilities">
+    <title>Gallery - RL Auto Repair</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            color: #3498db;
+        }
+
+        .filter-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 30px 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: #34495e;
+            color: white;
+            border: 2px solid #3498db;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: #3498db;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            height: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.5);
+        }
+
+        .gallery-item-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .gallery-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .gallery-item h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .gallery-item p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2c3e50;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            color: #3498db;
+        }
+
+        .modal-icon {
+            font-size: 5em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .stats-container {
+            background: #34495e;
+            padding: 40px 20px;
+            margin: 40px 0;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .stat-item {
+            padding: 20px;
+        }
+
+        .stat-number {
+            font-size: 3em;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🏆 Our Work & Facilities</h1>
+        <p style="font-size: 1.2em; margin-top: 10px;">Explore our state-of-the-art service center</p>
+    </header>
+
+    <div class="filter-buttons">
+        <button class="filter-btn active" onclick="filterGallery('all')">All</button>
+        <button class="filter-btn" onclick="filterGallery('services')">Services</button>
+        <button class="filter-btn" onclick="filterGallery('facilities')">Facilities</button>
+        <button class="filter-btn" onclick="filterGallery('team')">Team</button>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid">
+        <!-- Gallery items will be loaded here -->
+    </div>
+
+    <div class="stats-container">
+        <h2 style="font-size: 2.5em; margin-bottom: 40px; color: #3498db;">By The Numbers</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number" id="stat1">0</div>
+                <div class="stat-label">Vehicles Serviced</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="stat2">0</div>
+                <div class="stat-label">Certified Technicians</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="stat3">0</div>
+                <div class="stat-label">Service Bays</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="stat4">0</div>
+                <div class="stat-label">Years in Business</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div class="modal-icon" id="modalIcon"></div>
+            <h2 id="modalTitle" style="color: #3498db; margin-bottom: 15px;"></h2>
+            <p id="modalDescription" style="line-height: 1.8;"></p>
+        </div>
+    </div>
+
+    <script>
+        const galleryItems = [
+            {
+                category: 'services',
+                icon: '🔧',
+                title: 'Engine Repair',
+                description: 'Expert engine diagnostics and repair using advanced equipment and genuine parts.'
+            },
+            {
+                category: 'services',
+                icon: '🛞',
+                title: 'Tire Services',
+                description: 'Complete tire services including mounting, balancing, rotation, and alignment.'
+            },
+            {
+                category: 'facilities',
+                icon: '🏢',
+                title: 'Modern Facility',
+                description: 'State-of-the-art service center with the latest diagnostic and repair equipment.'
+            },
+            {
+                category: 'facilities',
+                icon: '☕',
+                title: 'Waiting Lounge',
+                description: 'Comfortable waiting area with complimentary WiFi, refreshments, and entertainment.'
+            },
+            {
+                category: 'team',
+                icon: '👨‍🔧',
+                title: 'Expert Technicians',
+                description: 'ASE-certified technicians with decades of combined experience in automotive repair.'
+            },
+            {
+                category: 'team',
+                icon: '🎓',
+                title: 'Continuous Training',
+                description: 'Our team regularly attends training to stay updated on the latest automotive technologies.'
+            },
+            {
+                category: 'services',
+                icon: '🔋',
+                title: 'Electrical Systems',
+                description: 'Comprehensive electrical system diagnostics and repair for all vehicle makes and models.'
+            },
+            {
+                category: 'facilities',
+                icon: '🚗',
+                title: 'Customer Parking',
+                description: 'Spacious, secure parking area for customer convenience during service appointments.'
+            }
+        ];
+
+        let currentFilter = 'all';
+
+        function loadGallery() {
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = '';
+
+            const filtered = currentFilter === 'all' 
+                ? galleryItems 
+                : galleryItems.filter(item => item.category === currentFilter);
+
+            filtered.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                div.style.animationDelay = `${index * 0.1}s`;
+                div.onclick = () => openModal(item);
+
+                div.innerHTML = `
+                    <div class="gallery-item-content">
+                        <div class="gallery-icon">${item.icon}</div>
+                        <h3>${item.title}</h3>
+                        <p>${item.description.substring(0, 50)}...</p>
+                    </div>
+                `;
+
+                grid.appendChild(div);
+            });
+        }
+
+        function filterGallery(category) {
+            currentFilter = category;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            loadGallery();
+        }
+
+        function openModal(item) {
+            document.getElementById('modalIcon').textContent = item.icon;
+            document.getElementById('modalTitle').textContent = item.title;
+            document.getElementById('modalDescription').textContent = item.description;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function animateCounter(id, target, duration) {
+            const element = document.getElementById(id);
+            let current = 0;
+            const increment = target / (duration / 16);
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target.toLocaleString();
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, 16);
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            loadGallery();
+            animateCounter('stat1', 15000, 2000);
+            animateCounter('stat2', 25, 2000);
+            animateCounter('stat3', 12, 2000);
+            animateCounter('stat4', 20, 2000);
+        });
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+</body>
+</html>
