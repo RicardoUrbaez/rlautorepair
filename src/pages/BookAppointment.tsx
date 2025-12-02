@@ -202,7 +202,7 @@ const BookAppointment = () => {
       // Import Tekmetric helpers
       const { findOrCreateCustomer, createTekmetricAppointment } = await import("@/lib/tekmetric");
       
-      const SHOP_ID = "238"; // From debug - Sandbox shop ID
+      const SHOP_ID = "13739"; // RL Auto Repair production shop ID
       
       // Split customer name
       const nameParts = values.customer_name.trim().split(' ');
