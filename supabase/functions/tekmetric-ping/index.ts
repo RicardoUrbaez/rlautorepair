@@ -25,10 +25,12 @@ serve(async (req) => {
     // Encode credentials for Basic Auth
     const credentials = btoa(`${clientId}:${clientSecret}`);
 
-    // OAuth token endpoint is at /oauth/token (not /api/v1/oauth/token)
+    // CORRECT endpoint: /api/v1/oauth/token
     const tokenUrl = baseUrl.includes('://') 
-      ? `${baseUrl}/oauth/token`
-      : `https://${baseUrl}/oauth/token`;
+      ? `${baseUrl}/api/v1/oauth/token`
+      : `https://${baseUrl}/api/v1/oauth/token`;
+
+    console.log('Token URL:', tokenUrl);
 
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
@@ -36,25 +38,27 @@ serve(async (req) => {
         'Authorization': `Basic ${credentials}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-      }).toString(),
+      body: 'grant_type=client_credentials',
     });
 
+    const responseText = await tokenResponse.text();
+    console.log('Token response status:', tokenResponse.status);
+    console.log('Token response:', responseText);
+
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error('Token request failed:', errorText);
-      throw new Error(`Failed to authenticate: ${tokenResponse.status}`);
+      throw new Error(`Failed to authenticate: ${tokenResponse.status} - ${responseText}`);
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = JSON.parse(responseText);
     console.log('Successfully authenticated with Tekmetric API');
+    console.log('Scopes (Shop IDs):', tokenData.scope);
 
     return new Response(JSON.stringify({
       success: true,
       message: 'Successfully connected to Tekmetric API',
       baseUrl: baseUrl,
       authenticated: true,
+      shopIds: tokenData.scope,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
