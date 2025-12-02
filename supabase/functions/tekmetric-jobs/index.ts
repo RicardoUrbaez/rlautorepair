@@ -6,14 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function getBaseUrl(): string {
+  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL') || '';
+  return baseUrl.includes('://') ? baseUrl : `https://${baseUrl}`;
+}
+
 async function getAccessToken() {
   const clientId = Deno.env.get('TEKMETRIC_CLIENT_ID');
   const clientSecret = Deno.env.get('TEKMETRIC_CLIENT_SECRET');
-  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
+  const baseUrl = getBaseUrl();
 
   const credentials = btoa(`${clientId}:${clientSecret}`);
 
-  const tokenResponse = await fetch(`https://${baseUrl}/api/v1/oauth/token`, {
+  // OAuth token endpoint is at /oauth/token (NOT /api/v1/oauth/token)
+  const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${credentials}`,
@@ -38,37 +44,34 @@ serve(async (req) => {
   }
 
   try {
-    const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
+    const baseUrl = getBaseUrl();
     const accessToken = await getAccessToken();
     
-    // Get request body for parameters
-    let params: any = {};
+    let params: Record<string, unknown> = {};
     try {
       const body = await req.text();
       if (body) {
         params = JSON.parse(body);
       }
     } catch (e) {
-      // No body or invalid JSON, continue with empty params
+      // No body or invalid JSON
     }
 
     console.log('=== TEKMETRIC JOBS REQUEST ===');
-    console.log('Params:', JSON.stringify(params, null, 2));
+    // Jobs endpoint is read-only, no TEST MODE check needed
 
-    // Fetch repair orders (jobs) - try /jobs endpoint instead of /repair-orders
-    const shopId = params.shopId || params.shop || '238';
+    const shopId = params.shopId || params.shop || '';
     const status = params.status;
     const startDate = params.startDate;
     const endDate = params.endDate;
 
-    let apiUrl = `https://${baseUrl}/api/v1/jobs`;
     const urlParams = new URLSearchParams();
-    urlParams.append('shop', shopId);
-    if (status) urlParams.append('status', status);
-    if (startDate) urlParams.append('startDate', startDate);
-    if (endDate) urlParams.append('endDate', endDate);
+    if (shopId) urlParams.append('shop', String(shopId));
+    if (status) urlParams.append('status', String(status));
+    if (startDate) urlParams.append('startDate', String(startDate));
+    if (endDate) urlParams.append('endDate', String(endDate));
     
-    apiUrl += `?${urlParams.toString()}`;
+    const apiUrl = `${baseUrl}/api/v1/jobs${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
 
     console.log('Fetching jobs from:', apiUrl);
 

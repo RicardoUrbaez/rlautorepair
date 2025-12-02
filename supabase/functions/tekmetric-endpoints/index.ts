@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -16,10 +17,15 @@ interface EndpointResults {
   [key: string]: EndpointResult;
 }
 
+function getBaseUrl(): string {
+  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL') || '';
+  return baseUrl.includes('://') ? baseUrl : `https://${baseUrl}`;
+}
+
 async function getAccessToken(): Promise<string> {
   const clientId = Deno.env.get('TEKMETRIC_CLIENT_ID');
   const clientSecret = Deno.env.get('TEKMETRIC_CLIENT_SECRET');
-  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL') || 'sandbox.tekmetric.com';
+  const baseUrl = getBaseUrl();
 
   if (!clientId || !clientSecret) {
     throw new Error('Tekmetric credentials not configured');
@@ -27,7 +33,8 @@ async function getAccessToken(): Promise<string> {
 
   const credentials = btoa(`${clientId}:${clientSecret}`);
   
-  const tokenResponse = await fetch(`https://${baseUrl}/api/v1/oauth/token`, {
+  // OAuth token endpoint is at /oauth/token (NOT /api/v1/oauth/token)
+  const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${credentials}`,
@@ -53,7 +60,7 @@ async function testEndpoint(
   const startTime = Date.now();
   
   try {
-    const url = `https://${baseUrl}/api/v1/${endpoint}?shop=${shopId}`;
+    const url = `${baseUrl}/api/v1/${endpoint}${shopId ? `?shop=${shopId}` : ''}`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -98,14 +105,12 @@ serve(async (req) => {
   try {
     console.log('Starting Tekmetric endpoint discovery...');
 
-    const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL') || 'sandbox.tekmetric.com';
-    const shopId = Deno.env.get('TEKMETRIC_SHOP_ID') || '238';
+    const baseUrl = getBaseUrl();
+    const shopId = Deno.env.get('TEKMETRIC_SHOP_ID') || '';
 
-    // Get access token
     const token = await getAccessToken();
     console.log('Access token obtained');
 
-    // Define endpoints to test
     const endpoints = [
       'customers',
       'appointments',
@@ -123,7 +128,6 @@ serve(async (req) => {
 
     console.log(`Testing ${endpoints.length} endpoints...`);
 
-    // Test all endpoints in parallel
     const results: EndpointResults = {};
     
     await Promise.all(
@@ -134,7 +138,6 @@ serve(async (req) => {
       })
     );
 
-    // Calculate summary
     const summary = {
       totalEndpoints: endpoints.length,
       available: Object.values(results).filter(r => r.status >= 200 && r.status < 300).length,

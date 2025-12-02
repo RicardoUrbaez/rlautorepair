@@ -6,15 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function getBaseUrl(): string {
+  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL') || '';
+  return baseUrl.includes('://') ? baseUrl : `https://${baseUrl}`;
+}
+
 async function getAccessToken() {
   const clientId = Deno.env.get('TEKMETRIC_CLIENT_ID');
   const clientSecret = Deno.env.get('TEKMETRIC_CLIENT_SECRET');
-  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
+  const baseUrl = getBaseUrl();
 
-  // Encode credentials for Basic Auth
   const credentials = btoa(`${clientId}:${clientSecret}`);
 
-  const tokenResponse = await fetch(`https://${baseUrl}/api/v1/oauth/token`, {
+  // OAuth token endpoint is at /oauth/token (NOT /api/v1/oauth/token)
+  const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${credentials}`,
@@ -33,17 +38,21 @@ async function getAccessToken() {
   return tokenData.access_token;
 }
 
+function isTestMode(): boolean {
+  const testMode = Deno.env.get('TEKMETRIC_TEST_MODE');
+  return testMode === 'true' || testMode === '1';
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
+    const baseUrl = getBaseUrl();
     const accessToken = await getAccessToken();
     
-    // Get request body for parameters
-    let params: any = {};
+    let params: Record<string, unknown> = {};
     if (req.method === 'POST' || req.method === 'GET') {
       try {
         const body = await req.text();
@@ -51,28 +60,41 @@ serve(async (req) => {
           params = JSON.parse(body);
         }
       } catch (e) {
-        // No body or invalid JSON, continue with empty params
+        // No body or invalid JSON
       }
     }
 
     console.log('Fetching customers from Tekmetric API');
-    console.log('Params:', JSON.stringify(params, null, 2));
+    console.log(`Test Mode: ${isTestMode() ? 'ENABLED' : 'DISABLED'}`);
 
-    const shopId = params.shopId || params.shop || '238'; // Default to test shop
+    const isWriteOperation = params.firstName !== undefined;
+
+    // Block write operations in TEST MODE
+    if (isWriteOperation && isTestMode()) {
+      console.log('TEST MODE ACTIVE - Blocking write operation');
+      return new Response(JSON.stringify({
+        error: 'TEST MODE ACTIVE — Write operations are disabled for production safety.',
+        testMode: true
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const shopId = params.shopId || params.shop || '';
     const customerId = params.customerId;
     const email = params.email;
     const phone = params.phone;
 
     if (req.method === 'GET' || (req.method === 'POST' && !params.firstName)) {
-      // Fetch customers
-      let apiUrl = `https://${baseUrl}/api/v1/customers`;
+      // Fetch customers (GET - always allowed)
       const urlParams = new URLSearchParams();
-      urlParams.append('shop', shopId);
-      if (customerId) urlParams.append('customerId', customerId);
-      if (email) urlParams.append('email', email);
-      if (phone) urlParams.append('phone', phone);
+      if (shopId) urlParams.append('shop', String(shopId));
+      if (customerId) urlParams.append('customerId', String(customerId));
+      if (email) urlParams.append('email', String(email));
+      if (phone) urlParams.append('phone', String(phone));
       
-      apiUrl += `?${urlParams.toString()}`;
+      const apiUrl = `${baseUrl}/api/v1/customers${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
 
       console.log('Fetching from:', apiUrl);
 
@@ -90,13 +112,11 @@ serve(async (req) => {
         throw new Error(`Failed to fetch customers: ${response.status}`);
       }
 
-      // Handle empty response
       const text = await response.text();
       let data;
       try {
         data = text ? JSON.parse(text) : { content: [] };
       } catch (e) {
-        console.log('Empty or invalid JSON response, returning empty array');
         data = { content: [] };
       }
 
@@ -107,12 +127,10 @@ serve(async (req) => {
       });
 
     } else if (req.method === 'POST' && params.firstName) {
-      // Create customer
+      // Create customer (blocked in TEST MODE - checked above)
       console.log('--- Creating Customer ---');
-      console.log('Request payload:', JSON.stringify(params, null, 2));
 
-      const endpoint = `https://${baseUrl}/api/v1/customers`;
-      console.log('POST endpoint:', endpoint);
+      const endpoint = `${baseUrl}/api/v1/customers`;
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -123,13 +141,9 @@ serve(async (req) => {
         body: JSON.stringify(params),
       });
 
-      console.log('Response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Failed to create customer');
-        console.error('Status:', response.status);
-        console.error('Error body:', errorText);
+        console.error('Failed to create customer:', errorText);
         
         let errorJson;
         try {
@@ -149,8 +163,7 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      console.log('✅ Successfully created customer');
-      console.log('Customer ID:', data.id);
+      console.log('Successfully created customer');
 
       return new Response(JSON.stringify({
         success: true,
