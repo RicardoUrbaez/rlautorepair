@@ -12,7 +12,6 @@ import Auth from "./pages/Auth";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import MechanicDashboard from "./pages/MechanicDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import TekmetricTest from "./pages/TekmetricTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,7 +33,6 @@ const App = () => (
           <Route path="/customer-dashboard" element={<CustomerDashboard />} />
           <Route path="/mechanic" element={<MechanicDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/tekmetric-test" element={<TekmetricTest />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
