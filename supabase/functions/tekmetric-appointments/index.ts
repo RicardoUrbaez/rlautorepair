@@ -123,12 +123,14 @@ serve(async (req) => {
       // Create appointment (blocked in TEST MODE - checked above)
       console.log('--- Creating Appointment ---');
       
-      const scheduledDateTime = `${params.scheduledDate}T${params.scheduledTime}`;
-      const startTime = new Date(scheduledDateTime).toISOString();
+      // Format time in local format (not UTC) - Tekmetric expects local shop time
+      // Input: scheduledDate = "2025-12-02", scheduledTime = "18:30:00"
+      const startTime = `${params.scheduledDate}T${params.scheduledTime}`;
       
-      const endTimeDate = new Date(scheduledDateTime);
-      endTimeDate.setHours(endTimeDate.getHours() + 1);
-      const endTime = endTimeDate.toISOString();
+      // Calculate end time (1 hour later)
+      const [hours, minutes, seconds] = String(params.scheduledTime).split(':').map(Number);
+      const endHours = (hours + 1) % 24;
+      const endTime = `${params.scheduledDate}T${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')}`;
       
       const tekmetricPayload: Record<string, unknown> = {
         customerId: parseInt(String(params.customerId)),
