@@ -25,10 +25,10 @@ serve(async (req) => {
     // Encode credentials for Basic Auth
     const credentials = btoa(`${clientId}:${clientSecret}`);
 
-    // OAuth token endpoint is at /oauth/token (not /api/v1/oauth/token)
+    // CORRECT endpoint: /api/v1/oauth/token
     const tokenUrl = baseUrl.includes('://') 
-      ? `${baseUrl}/oauth/token`
-      : `https://${baseUrl}/oauth/token`;
+      ? `${baseUrl}/api/v1/oauth/token`
+      : `https://${baseUrl}/api/v1/oauth/token`;
 
     console.log('Token URL:', tokenUrl);
 
@@ -38,9 +38,7 @@ serve(async (req) => {
         'Authorization': `Basic ${credentials}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-      }).toString(),
+      body: 'grant_type=client_credentials',
     });
 
     if (!tokenResponse.ok) {
@@ -55,7 +53,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       access_token: tokenData.access_token,
       token_type: tokenData.token_type,
-      expires_in: tokenData.expires_in,
+      scope: tokenData.scope,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

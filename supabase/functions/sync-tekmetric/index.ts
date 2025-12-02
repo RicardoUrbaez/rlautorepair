@@ -19,8 +19,8 @@ async function getTekmetricAccessToken() {
 
   const credentials = btoa(`${clientId}:${clientSecret}`);
 
-  // OAuth token endpoint is at /oauth/token (NOT /api/v1/oauth/token)
-  const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
+  // OAuth token endpoint is at /api/v1/oauth/token
+  const tokenResponse = await fetch(`${baseUrl}/api/v1/oauth/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${credentials}`,
