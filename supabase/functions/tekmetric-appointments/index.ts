@@ -123,14 +123,15 @@ serve(async (req) => {
       // Create appointment (blocked in TEST MODE - checked above)
       console.log('--- Creating Appointment ---');
       
-      // Format time in local format (not UTC) - Tekmetric expects local shop time
-      // Input: scheduledDate = "2025-12-02", scheduledTime = "18:30:00"
-      const startTime = `${params.scheduledDate}T${params.scheduledTime}`;
+      // Format time with timezone - Tekmetric requires ZonedDateTime format
+      // Assuming Eastern timezone (EST/EDT) for RL Auto Repair
+      const timezone = '-05:00'; // EST offset (adjust to -04:00 for EDT during daylight saving)
+      const startTime = `${params.scheduledDate}T${params.scheduledTime}${timezone}`;
       
       // Calculate end time (1 hour later)
       const [hours, minutes, seconds] = String(params.scheduledTime).split(':').map(Number);
       const endHours = (hours + 1) % 24;
-      const endTime = `${params.scheduledDate}T${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')}`;
+      const endTime = `${params.scheduledDate}T${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')}${timezone}`;
       
       const tekmetricPayload: Record<string, unknown> = {
         customerId: parseInt(String(params.customerId)),
