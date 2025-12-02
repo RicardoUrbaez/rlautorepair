@@ -43,8 +43,8 @@ export async function fetchTekmetricAppointments(params?: {
   endDate?: string;
 }) {
   try {
+    // Use POST with body since GET can't have a body in browser
     const { data, error } = await supabase.functions.invoke('tekmetric-appointments', {
-      method: 'GET',
       body: params || {},
     });
     
@@ -83,14 +83,8 @@ export async function fetchTekmetricCustomers(params?: {
   shopId?: string;
 }) {
   try {
-    const queryParams = new URLSearchParams();
-    if (params?.shopId) queryParams.append('shopId', params.shopId);
-    if (params?.customerId) queryParams.append('customerId', params.customerId);
-    if (params?.email) queryParams.append('email', params.email);
-    if (params?.phone) queryParams.append('phone', params.phone);
-
+    // Use POST with body since GET can't have a body
     const { data, error } = await supabase.functions.invoke('tekmetric-customers', {
-      method: 'GET',
       body: params || {},
     });
     
