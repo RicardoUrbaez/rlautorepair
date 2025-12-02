@@ -69,9 +69,9 @@ export default function TekmetricTest() {
   const loadSyncStats = async () => {
     try {
       const [customersData, appointmentsData, jobsData] = await Promise.all([
-        fetchTekmetricCustomers({ shopId: '238' }).catch(() => ({ content: [] })),
-        fetchTekmetricAppointments({ shopId: '238' }).catch(() => []),
-        fetchTekmetricJobs({ shopId: '238', status: 'open' }).catch(() => ({ content: [] })),
+        fetchTekmetricCustomers({ shopId: '13739' }).catch(() => ({ content: [] })),
+        fetchTekmetricAppointments({ shopId: '13739' }).catch(() => []),
+        fetchTekmetricJobs({ shopId: '13739', status: 'open' }).catch(() => ({ content: [] })),
       ]);
 
       setSyncStats({
