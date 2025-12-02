@@ -130,6 +130,44 @@ serve(async (req) => {
       // Create customer (blocked in TEST MODE - checked above)
       console.log('--- Creating Customer ---');
 
+      // Format the payload according to Tekmetric API requirements
+      // email must be Array<String>, phones must be Array<{number, type, primary}>
+      const tekmetricPayload: Record<string, unknown> = {
+        shopId: parseInt(String(params.shopId || '13739')),
+        firstName: String(params.firstName),
+        lastName: params.lastName ? String(params.lastName) : undefined,
+        customerTypeId: 1, // 1 = PERSON
+      };
+
+      // Format email as array
+      if (params.email) {
+        const emailStr = String(params.email);
+        tekmetricPayload.email = [emailStr];
+      }
+
+      // Format phone as phones array with proper structure
+      if (params.phone) {
+        const phoneStr = String(params.phone);
+        tekmetricPayload.phones = [{
+          number: phoneStr,
+          type: 'Mobile',
+          primary: true,
+        }];
+      }
+
+      // Add address if provided
+      if (params.address || params.city || params.state || params.zip) {
+        tekmetricPayload.address = {
+          address1: params.address || params.address1 || '',
+          address2: params.address2 || '',
+          city: params.city || '',
+          state: params.state || '',
+          zip: params.zip || '',
+        };
+      }
+
+      console.log('Tekmetric customer payload:', JSON.stringify(tekmetricPayload, null, 2));
+
       const endpoint = `${baseUrl}/api/v1/customers`;
 
       const response = await fetch(endpoint, {
@@ -138,7 +176,7 @@ serve(async (req) => {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(params),
+        body: JSON.stringify(tekmetricPayload),
       });
 
       if (!response.ok) {
