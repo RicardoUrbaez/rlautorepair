@@ -25,8 +25,12 @@ serve(async (req) => {
     // Encode credentials for Basic Auth
     const credentials = btoa(`${clientId}:${clientSecret}`);
 
-    // First, get OAuth token
-    const tokenResponse = await fetch(`https://${baseUrl}/api/v1/oauth/token`, {
+    // OAuth token endpoint is at /oauth/token (not /api/v1/oauth/token)
+    const tokenUrl = baseUrl.includes('://') 
+      ? `${baseUrl}/oauth/token`
+      : `https://${baseUrl}/oauth/token`;
+
+    const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${credentials}`,

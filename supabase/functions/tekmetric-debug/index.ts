@@ -6,18 +6,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function getBaseUrl(): string {
+  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL') || '';
+  return baseUrl.includes('://') ? baseUrl : `https://${baseUrl}`;
+}
+
 async function getAccessToken() {
   const clientId = Deno.env.get('TEKMETRIC_CLIENT_ID');
   const clientSecret = Deno.env.get('TEKMETRIC_CLIENT_SECRET');
-  const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
+  const baseUrl = getBaseUrl();
 
-  console.log('Getting access token with client_id:', clientId);
+  console.log('Getting access token...');
   console.log('Base URL:', baseUrl);
 
-  // Encode credentials for Basic Auth
   const credentials = btoa(`${clientId}:${clientSecret}`);
   
-  const tokenResponse = await fetch(`https://${baseUrl}/api/v1/oauth/token`, {
+  // OAuth token endpoint is at /oauth/token (NOT /api/v1/oauth/token)
+  const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${credentials}`,
@@ -44,24 +49,23 @@ serve(async (req) => {
   }
 
   try {
-    const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
+    const baseUrl = getBaseUrl();
     const clientId = Deno.env.get('TEKMETRIC_CLIENT_ID');
+    const testMode = Deno.env.get('TEKMETRIC_TEST_MODE');
     
     console.log('=== TEKMETRIC DEBUG START ===');
     console.log('Environment:', baseUrl);
     console.log('Client ID:', clientId);
+    console.log('Test Mode:', testMode === 'true' || testMode === '1' ? 'ENABLED' : 'DISABLED');
 
-    // Get access token
     const tokenData = await getAccessToken();
     const accessToken = tokenData.access_token;
     
     console.log('Token obtained successfully');
-    console.log('Token type:', tokenData.token_type);
-    console.log('Expires in:', tokenData.expires_in, 'seconds');
 
     // Test 1: Get shops
     console.log('\n--- Testing GET /shops ---');
-    const shopsResponse = await fetch(`https://${baseUrl}/api/v1/shops`, {
+    const shopsResponse = await fetch(`${baseUrl}/api/v1/shops`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -72,7 +76,6 @@ serve(async (req) => {
     let shopId = null;
     if (shopsResponse.ok) {
       shops = await shopsResponse.json();
-      console.log('Shops response:', shops);
       shopId = shops[0]?.id;
     } else {
       const errorText = await shopsResponse.text();
@@ -81,7 +84,7 @@ serve(async (req) => {
 
     // Test 2: Get customers
     console.log('\n--- Testing GET /customers ---');
-    const customersResponse = await fetch(`https://${baseUrl}/api/v1/customers?limit=5`, {
+    const customersResponse = await fetch(`${baseUrl}/api/v1/customers?limit=5`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -92,16 +95,11 @@ serve(async (req) => {
     if (customersResponse.ok) {
       const customersData = await customersResponse.json();
       customers = customersData.content || customersData;
-      console.log('Customers count:', customers.length);
-      console.log('First customer:', customers[0]);
-    } else {
-      const errorText = await customersResponse.text();
-      console.error('Customers request failed:', customersResponse.status, errorText);
     }
 
     // Test 3: Get appointments
     console.log('\n--- Testing GET /appointments ---');
-    const appointmentsResponse = await fetch(`https://${baseUrl}/api/v1/appointments?limit=5`, {
+    const appointmentsResponse = await fetch(`${baseUrl}/api/v1/appointments?limit=5`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -112,34 +110,22 @@ serve(async (req) => {
     if (appointmentsResponse.ok) {
       const appointmentsData = await appointmentsResponse.json();
       appointments = appointmentsData.content || appointmentsData;
-      console.log('Appointments count:', appointments.length);
-      if (appointments.length > 0) {
-        console.log('First appointment structure:', JSON.stringify(appointments[0], null, 2));
-      }
-    } else {
-      const errorText = await appointmentsResponse.text();
-      console.error('Appointments request failed:', appointmentsResponse.status, errorText);
     }
-
-    // Test 4: Get API schema for appointments (if available)
-    console.log('\n--- Testing POST /appointments endpoint availability ---');
-    const testAppointmentPayload = {
-      customerId: customers[0]?.id || 1,
-      shopId: shopId || 1,
-      scheduledDate: new Date().toISOString().split('T')[0],
-      scheduledTime: "10:00:00",
-      description: "Test appointment from debug",
-    };
-
-    console.log('Test payload:', testAppointmentPayload);
 
     console.log('=== TEKMETRIC DEBUG END ===');
 
+    const isProduction = !baseUrl.includes('sandbox');
+    const isTestModeEnabled = testMode === 'true' || testMode === '1';
+
     const debugInfo = {
       status: 'ok',
-      environment: baseUrl?.includes('sandbox') ? 'sandbox' : 'production',
+      environment: isProduction ? 'production' : 'sandbox',
       baseUrl: baseUrl,
       clientId: clientId,
+      testMode: isTestModeEnabled,
+      testModeMessage: isTestModeEnabled 
+        ? 'TEST MODE ACTIVE — Write operations are disabled for production safety.'
+        : null,
       tokenValid: true,
       tokenExpiresIn: tokenData.expires_in,
       apiTests: {
@@ -148,28 +134,31 @@ serve(async (req) => {
           status: shopsResponse.status,
           count: shops.length,
           shopId: shopId,
-          data: shops.slice(0, 2),
         },
         customers: {
           success: customersResponse.ok,
           status: customersResponse.status,
           count: customers.length,
-          sampleCustomer: customers[0],
         },
         appointments: {
           success: appointmentsResponse.ok,
           status: appointmentsResponse.status,
           count: appointments.length,
-          sampleAppointment: appointments[0],
         },
       },
-      testPayload: testAppointmentPayload,
       recommendations: [
-        baseUrl?.includes('sandbox') 
-          ? '⚠️ You are using SANDBOX environment. Appointments will NOT appear on production Tekmetric.com'
-          : '✅ You are using PRODUCTION environment',
-        shops.length === 0 ? '❌ No shops found. You need a shop ID to create appointments.' : `✅ Shop found: ${shopId}`,
-        customers.length === 0 ? '⚠️ No customers found. Create customers first or use existing customer IDs.' : '✅ Customers available',
+        isProduction 
+          ? '✅ You are using PRODUCTION environment'
+          : '⚠️ You are using SANDBOX environment',
+        isTestModeEnabled
+          ? '🔒 TEST MODE is ENABLED - Write operations are blocked'
+          : '⚠️ TEST MODE is DISABLED - Write operations are allowed',
+        shops.length === 0 
+          ? '❌ No shops found' 
+          : `✅ Shop found: ${shopId}`,
+        customers.length === 0 
+          ? '⚠️ No customers found' 
+          : '✅ Customers available',
       ],
     };
 

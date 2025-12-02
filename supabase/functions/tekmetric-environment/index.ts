@@ -10,6 +10,7 @@ function getTekmetricEnvironment(baseUrl: string | undefined) {
   
   const url = baseUrl.toLowerCase();
   if (url.includes("sandbox")) return "sandbox";
+  if (url.includes("shop.tekmetric.com") || url.includes("shop.tekmecic.com")) return "production";
   if (url.includes("api.tekmetric.com")) return "production";
   return "unknown";
 }
@@ -21,6 +22,7 @@ serve(async (req) => {
 
   try {
     const baseUrl = Deno.env.get('TEKMETRIC_BASE_URL');
+    const testMode = Deno.env.get('TEKMETRIC_TEST_MODE');
     const environment = getTekmetricEnvironment(baseUrl);
     
     const fullUrl = baseUrl 
@@ -31,6 +33,10 @@ serve(async (req) => {
       environment,
       baseUrl: fullUrl,
       raw: baseUrl,
+      testMode: testMode === 'true' || testMode === '1',
+      testModeMessage: testMode === 'true' || testMode === '1' 
+        ? 'TEST MODE ACTIVE — Write operations are disabled for production safety.'
+        : null,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

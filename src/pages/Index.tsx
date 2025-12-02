@@ -59,7 +59,7 @@ const Index = () => {
             <span className="text-accent">You Can Trust</span>
           </h1>
           <p className="text-xl text-white/90 mb-8 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            Professional service, competitive pricing, and a commitment to excellence
+            Service with Integrity — Est. 2012
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: "0.4s" }}>
             <Link to="/book">
