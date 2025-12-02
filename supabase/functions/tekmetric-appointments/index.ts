@@ -126,12 +126,21 @@ serve(async (req) => {
       // Format time with timezone - Tekmetric requires ZonedDateTime format
       // Assuming Eastern timezone (EST/EDT) for RL Auto Repair
       const timezone = '-05:00'; // EST offset (adjust to -04:00 for EDT during daylight saving)
-      const startTime = `${params.scheduledDate}T${params.scheduledTime}${timezone}`;
+      
+      // Ensure time has seconds (HH:mm:ss format)
+      const timeParts = String(params.scheduledTime).split(':');
+      const formattedTime = `${timeParts[0].padStart(2, '0')}:${(timeParts[1] || '00').padStart(2, '0')}:${(timeParts[2] || '00').padStart(2, '0')}`;
+      
+      const startTime = `${params.scheduledDate}T${formattedTime}${timezone}`;
       
       // Calculate end time (1 hour later)
-      const [hours, minutes, seconds] = String(params.scheduledTime).split(':').map(Number);
+      const hours = parseInt(timeParts[0]) || 0;
+      const minutes = parseInt(timeParts[1]) || 0;
       const endHours = (hours + 1) % 24;
-      const endTime = `${params.scheduledDate}T${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}:${String(seconds || 0).padStart(2, '0')}${timezone}`;
+      const endTime = `${params.scheduledDate}T${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00${timezone}`;
+      
+      console.log('Formatted startTime:', startTime);
+      console.log('Formatted endTime:', endTime);
       
       const tekmetricPayload: Record<string, unknown> = {
         customerId: parseInt(String(params.customerId)),
