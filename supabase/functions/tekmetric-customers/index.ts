@@ -325,15 +325,17 @@ serve(async (req) => {
             // Phone does NOT match - this is a DIFFERENT person trying to use an existing email
             console.error('Phone MISMATCH - existing customer has different phone. Cannot create.');
             console.error('Input phone:', inputPhoneNormalized, 'Existing phones:', existingPhoneNormalized);
+            // Return 200 with success:false so client can read the error message
+            // (non-200 status codes cause supabase.functions.invoke to throw without body)
             return new Response(JSON.stringify({
               success: false,
+              emailConflict: true,
               error: {
                 message: 'This email is already registered to another customer. Please use a different email address.',
                 existingCustomerName: `${existingCustomer.firstName} ${existingCustomer.lastName}`,
               },
-              status: 409,
             }), {
-              status: 409,
+              status: 200, // Return 200 so client receives the body
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
