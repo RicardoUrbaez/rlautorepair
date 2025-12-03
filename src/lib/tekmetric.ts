@@ -126,6 +126,8 @@ export async function createTekmetricCustomer(customer: {
 /**
  * Find existing customer or create new one in Tekmetric
  * Searches by phone first (Tekmetric recommended), then email as fallback
+ * IMPORTANT: Tekmetric API returns ALL customers sorted alphabetically, not exact matches!
+ * We must filter results to find actual matches.
  */
 export async function findOrCreateCustomer(params: {
   shopId: string | number;
@@ -140,6 +142,26 @@ export async function findOrCreateCustomer(params: {
 }) {
   // Clean phone number - remove all non-digits
   const cleanPhone = params.phone.replace(/\D/g, '');
+  const cleanEmail = params.email.toLowerCase().trim();
+  
+  // Helper to check if customer has matching phone
+  const hasMatchingPhone = (customer: any): boolean => {
+    if (!customer.phone || !Array.isArray(customer.phone)) return false;
+    return customer.phone.some((p: any) => {
+      const customerPhone = String(p.number || '').replace(/\D/g, '');
+      return customerPhone === cleanPhone;
+    });
+  };
+  
+  // Helper to check if customer has matching email
+  const hasMatchingEmail = (customer: any): boolean => {
+    if (!customer.email) return false;
+    // Email can be string or array in Tekmetric
+    if (Array.isArray(customer.email)) {
+      return customer.email.some((e: string) => e.toLowerCase().trim() === cleanEmail);
+    }
+    return customer.email.toLowerCase().trim() === cleanEmail;
+  };
   
   // Step 1: Search by phone number (Tekmetric recommended method)
   try {
@@ -150,8 +172,13 @@ export async function findOrCreateCustomer(params: {
     });
     
     if (phoneResults?.content?.length > 0) {
-      console.log('Found existing customer by phone:', phoneResults.content[0].id);
-      return { customer: phoneResults.content[0], created: false };
+      // Find customer with EXACT phone match
+      const exactMatch = phoneResults.content.find(hasMatchingPhone);
+      if (exactMatch) {
+        console.log('Found EXACT phone match:', exactMatch.id, exactMatch.firstName, exactMatch.lastName);
+        return { customer: exactMatch, created: false };
+      }
+      console.log('No exact phone match found in', phoneResults.content.length, 'results');
     }
   } catch (error) {
     console.log('Phone search failed, trying email...');
@@ -159,22 +186,27 @@ export async function findOrCreateCustomer(params: {
 
   // Step 2: Search by email as fallback
   try {
-    console.log('Searching Tekmetric customer by email:', params.email);
+    console.log('Searching Tekmetric customer by email:', cleanEmail);
     const emailResults = await fetchTekmetricCustomers({ 
       shopId: params.shopId.toString(),
-      email: params.email 
+      email: cleanEmail 
     });
     
     if (emailResults?.content?.length > 0) {
-      console.log('Found existing customer by email:', emailResults.content[0].id);
-      return { customer: emailResults.content[0], created: false };
+      // Find customer with EXACT email match
+      const exactMatch = emailResults.content.find(hasMatchingEmail);
+      if (exactMatch) {
+        console.log('Found EXACT email match:', exactMatch.id, exactMatch.firstName, exactMatch.lastName);
+        return { customer: exactMatch, created: false };
+      }
+      console.log('No exact email match found in', emailResults.content.length, 'results');
     }
   } catch (error) {
     console.log('Email search failed, will create new customer');
   }
 
   // Step 3: Customer doesn't exist - create new one
-  console.log('Creating new Tekmetric customer:', params.firstName, params.lastName);
+  console.log('Creating NEW Tekmetric customer:', params.firstName, params.lastName, cleanEmail, cleanPhone);
   const result = await createTekmetricCustomer({
     shopId: params.shopId,
     firstName: params.firstName,
