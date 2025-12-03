@@ -257,9 +257,17 @@ const BookAppointment = () => {
       if (result.success) {
         console.log('✅ Synced to Tekmetric:', result.data.id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Tekmetric sync error:', error);
-      // Don't throw - this is background operation
+      
+      // Check for email conflict error - show user-friendly message
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('email is already registered') || errorMessage.includes('already in use')) {
+        toast.error('This email is already registered to another customer in our system. Please use a different email address or contact us for assistance.');
+      } else {
+        // Log other errors but don't block the booking (appointment saved to Supabase)
+        console.warn('Tekmetric sync failed but local appointment saved:', errorMessage);
+      }
     }
   };
 
