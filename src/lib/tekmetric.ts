@@ -111,11 +111,22 @@ export async function createTekmetricCustomer(customer: {
   zip?: string;
 }) {
   try {
+    console.log('=== CREATE TEKMETRIC CUSTOMER ===');
+    console.log('Sending to Tekmetric:', JSON.stringify(customer, null, 2));
+    
     const { data, error } = await supabase.functions.invoke('tekmetric-customers', {
       body: customer,
     });
 
     if (error) throw error;
+    
+    // Check for email conflict (phone doesn't match existing customer)
+    if (data?.emailConflict) {
+      const errorMessage = data.error?.message || 'This email is already registered to another customer.';
+      throw new Error(errorMessage);
+    }
+    
+    console.log('Tekmetric response:', JSON.stringify(data, null, 2));
     return data;
   } catch (error) {
     console.error('Error creating Tekmetric customer:', error);
