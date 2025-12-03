@@ -18,7 +18,6 @@ async function getAccessToken() {
 
   const credentials = btoa(`${clientId}:${clientSecret}`);
 
-  // OAuth token endpoint is at /api/v1/oauth/token
   const tokenResponse = await fetch(`${baseUrl}/api/v1/oauth/token`, {
     method: 'POST',
     headers: {
@@ -43,6 +42,76 @@ function isTestMode(): boolean {
   return testMode === 'true' || testMode === '1';
 }
 
+/**
+ * Normalize phone number to digits only, with optional +1 prefix
+ */
+function normalizePhone(phone: string): string {
+  if (!phone) return '';
+  // Remove all non-digits
+  let digits = phone.replace(/\D/g, '');
+  // If starts with 1 and has 11 digits, remove the leading 1
+  if (digits.length === 11 && digits.startsWith('1')) {
+    digits = digits.substring(1);
+  }
+  return digits;
+}
+
+/**
+ * Check if customer phone matches the search phone
+ */
+function customerHasPhone(customer: any, searchPhone: string): boolean {
+  if (!searchPhone) return false;
+  const normalizedSearch = normalizePhone(searchPhone);
+  
+  // Check phones array
+  if (customer.phones && Array.isArray(customer.phones)) {
+    for (const p of customer.phones) {
+      const custPhone = normalizePhone(p.number || '');
+      if (custPhone === normalizedSearch) {
+        return true;
+      }
+    }
+  }
+  
+  // Check legacy phone field (string or array)
+  if (customer.phone) {
+    if (Array.isArray(customer.phone)) {
+      for (const p of customer.phone) {
+        const custPhone = normalizePhone(typeof p === 'string' ? p : p.number || '');
+        if (custPhone === normalizedSearch) {
+          return true;
+        }
+      }
+    } else if (typeof customer.phone === 'string') {
+      if (normalizePhone(customer.phone) === normalizedSearch) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Check if customer email matches the search email
+ */
+function customerHasEmail(customer: any, searchEmail: string): boolean {
+  if (!searchEmail) return false;
+  const normalizedSearch = searchEmail.toLowerCase().trim();
+  
+  // Check email field (can be string or array in Tekmetric)
+  if (customer.email) {
+    if (Array.isArray(customer.email)) {
+      return customer.email.some((e: string) => 
+        e.toLowerCase().trim() === normalizedSearch
+      );
+    }
+    return customer.email.toLowerCase().trim() === normalizedSearch;
+  }
+  
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -53,20 +122,20 @@ serve(async (req) => {
     const accessToken = await getAccessToken();
     
     let params: Record<string, unknown> = {};
-    if (req.method === 'POST' || req.method === 'GET') {
-      try {
-        const body = await req.text();
-        if (body) {
-          params = JSON.parse(body);
-        }
-      } catch (e) {
-        // No body or invalid JSON
+    try {
+      const body = await req.text();
+      if (body) {
+        params = JSON.parse(body);
       }
+    } catch (e) {
+      // No body or invalid JSON
     }
 
-    console.log('Fetching customers from Tekmetric API');
+    console.log('=== TEKMETRIC CUSTOMERS REQUEST ===');
     console.log(`Test Mode: ${isTestMode() ? 'ENABLED' : 'DISABLED'}`);
+    console.log('Request params:', JSON.stringify(params));
 
+    // Determine if this is a write operation (has firstName = creating customer)
     const isWriteOperation = params.firstName !== undefined;
 
     // Block write operations in TEST MODE
@@ -83,16 +152,20 @@ serve(async (req) => {
 
     const shopId = params.shopId || params.shop || '';
     const customerId = params.customerId;
-    const email = params.email;
-    const phone = params.phone;
+    const email = params.email ? String(params.email).toLowerCase().trim() : '';
+    const phone = params.phone ? normalizePhone(String(params.phone)) : '';
 
-    if (req.method === 'GET' || (req.method === 'POST' && !params.firstName)) {
-      // Fetch customers (GET - always allowed)
+    if (!isWriteOperation) {
+      // SEARCH for customers (GET operation)
+      console.log('--- Searching for customers ---');
+      console.log(`shopId: ${shopId}, phone: ${phone}, email: ${email}, customerId: ${customerId}`);
+      
       const urlParams = new URLSearchParams();
       if (shopId) urlParams.append('shop', String(shopId));
       if (customerId) urlParams.append('customerId', String(customerId));
-      if (email) urlParams.append('email', String(email));
-      if (phone) urlParams.append('phone', String(phone));
+      // Tekmetric uses 'phone' param for phone search
+      if (phone) urlParams.append('phone', phone);
+      if (email) urlParams.append('email', email);
       
       const apiUrl = `${baseUrl}/api/v1/customers${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
 
@@ -120,36 +193,67 @@ serve(async (req) => {
         data = { content: [] };
       }
 
-      console.log(`Successfully fetched ${data.content?.length || data.length || 0} customers`);
+      // IMPORTANT: Tekmetric may return ALL customers, so we MUST filter for EXACT matches
+      const allCustomers = data.content || [];
+      console.log(`Tekmetric returned ${allCustomers.length} customers - filtering for exact matches`);
+      
+      let exactMatches: any[] = [];
+      
+      if (phone) {
+        // Filter for exact phone match
+        exactMatches = allCustomers.filter((c: any) => customerHasPhone(c, phone));
+        console.log(`Found ${exactMatches.length} customers with exact phone match: ${phone}`);
+      } else if (email) {
+        // Filter for exact email match
+        exactMatches = allCustomers.filter((c: any) => customerHasEmail(c, email));
+        console.log(`Found ${exactMatches.length} customers with exact email match: ${email}`);
+      } else if (customerId) {
+        // Direct ID lookup - return as-is
+        exactMatches = allCustomers;
+      } else {
+        // No search criteria - return all (for listing)
+        exactMatches = allCustomers;
+      }
 
-      return new Response(JSON.stringify(data), {
+      // Return only exact matches
+      const result = {
+        ...data,
+        content: exactMatches,
+        totalElements: exactMatches.length,
+      };
+
+      console.log(`Returning ${exactMatches.length} exact match(es)`);
+
+      return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
 
-    } else if (req.method === 'POST' && params.firstName) {
-      // Create customer (blocked in TEST MODE - checked above)
+    } else {
+      // CREATE customer (blocked in TEST MODE - checked above)
       console.log('--- Creating Customer ---');
+      console.log('Input params:', JSON.stringify(params));
+
+      // Normalize phone for creation
+      const customerPhone = normalizePhone(String(params.phone || ''));
+      const customerEmail = String(params.email || '').toLowerCase().trim();
 
       // Format the payload according to Tekmetric API requirements
-      // email must be Array<String>, phones must be Array<{number, type, primary}>
       const tekmetricPayload: Record<string, unknown> = {
         shopId: parseInt(String(params.shopId || '13739')),
-        firstName: String(params.firstName),
-        lastName: params.lastName ? String(params.lastName) : undefined,
+        firstName: String(params.firstName).trim(),
+        lastName: params.lastName ? String(params.lastName).trim() : '',
         customerTypeId: 1, // 1 = PERSON
       };
 
-      // Format email as array
-      if (params.email) {
-        const emailStr = String(params.email);
-        tekmetricPayload.email = [emailStr];
+      // Email must be array of strings
+      if (customerEmail) {
+        tekmetricPayload.email = [customerEmail];
       }
 
-      // Format phone as phones array with proper structure
-      if (params.phone) {
-        const phoneStr = String(params.phone);
+      // Phones must be array of objects with {number, type, primary}
+      if (customerPhone) {
         tekmetricPayload.phones = [{
-          number: phoneStr,
+          number: customerPhone,
           type: 'Mobile',
           primary: true,
         }];
@@ -191,7 +295,7 @@ serve(async (req) => {
         }
 
         // Handle 409 Conflict - customer already exists
-        // Tekmetric helpfully returns the existing customer data in the response
+        // Tekmetric returns the existing customer data in the response
         if (response.status === 409 && errorJson?.data?.content?.length > 0) {
           const existingCustomer = errorJson.data.content[0];
           console.log('Customer already exists (409), returning existing:', existingCustomer.id);
@@ -216,7 +320,7 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      console.log('Successfully created customer');
+      console.log('Successfully created customer:', data.id);
 
       return new Response(JSON.stringify({
         success: true,
@@ -226,11 +330,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('Error in tekmetric-customers function:', error);
