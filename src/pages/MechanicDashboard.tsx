@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import Navbar from "@/components/Navbar";
@@ -7,34 +7,32 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar, Car, Clock, Mail, Phone, MapPin } from "lucide-react";
+import { Calendar, Car, Phone, Play, CheckCircle, Clock, Shield, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type Appointment = {
+type AssignedJob = {
   id: string;
-  appointment_date: string;
-  appointment_time: string;
+  tekmetric_job_id?: string;
+  tekmetric_appointment_id?: string;
   customer_name: string;
-  customer_email: string;
-  customer_phone: string;
-  vehicle_make: string;
-  vehicle_model: string;
-  vehicle_year: number;
-  vin?: string;
-  job_status: string;
-  street_address?: string;
-  city?: string;
-  state?: string;
+  customer_phone?: string;
+  vehicle: string;
+  description?: string;
+  appointment_date?: string;
+  status: string;
   notes?: string;
+  created_at: string;
 };
 
 const MechanicDashboard = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [jobs, setJobs] = useState<AssignedJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMechanic, setIsMechanic] = useState(false);
+  const [updatingJob, setUpdatingJob] = useState<string | null>(null);
+  const [jobNotes, setJobNotes] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -51,7 +49,6 @@ const MechanicDashboard = () => {
 
     setUser(session.user);
 
-    // Check if user has mechanic role
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
@@ -76,13 +73,21 @@ const MechanicDashboard = () => {
   const fetchAssignedJobs = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from("appointments")
+        .from("assigned_jobs")
         .select("*")
-        .eq("assigned_mechanic_id", userId)
-        .order("appointment_date", { ascending: true });
+        .eq("assigned_to", userId)
+        .in("status", ["pending", "in_progress", "completed"])
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setAppointments(data || []);
+      setJobs(data || []);
+      
+      // Initialize notes
+      const notesMap: Record<string, string> = {};
+      data?.forEach(job => {
+        notesMap[job.id] = job.notes || '';
+      });
+      setJobNotes(notesMap);
     } catch (error) {
       console.error("Error fetching jobs:", error);
     } finally {
@@ -90,154 +95,273 @@ const MechanicDashboard = () => {
     }
   };
 
-  const updateJobStatus = async (appointmentId: string, newStatus: string) => {
+  const updateJobStatus = async (jobId: string, newStatus: string) => {
+    setUpdatingJob(jobId);
     try {
+      const updateData: any = { 
+        status: newStatus,
+        notes: jobNotes[jobId] || null,
+      };
+
+      if (newStatus === 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
-        .from("appointments")
-        .update({ job_status: newStatus })
-        .eq("id", appointmentId);
+        .from("assigned_jobs")
+        .update(updateData)
+        .eq("id", jobId);
 
       if (error) throw error;
 
-      setAppointments(prev =>
-        prev.map(apt => apt.id === appointmentId ? { ...apt, job_status: newStatus } : apt)
+      setJobs(prev =>
+        prev.map(job => job.id === jobId ? { ...job, status: newStatus, notes: jobNotes[jobId] } : job)
       );
 
-      toast({ title: "Status Updated", description: `Job status changed to ${newStatus}` });
+      toast({ 
+        title: "Status Updated", 
+        description: `Job marked as ${newStatus.replace("_", " ")}` 
+      });
 
-      // If job completed, trigger SMS notification via edge function
-      if (newStatus === "completed") {
-        const appointment = appointments.find(a => a.id === appointmentId);
-        if (appointment) {
-          await supabase.functions.invoke("send-completion-sms", {
-            body: {
-              customerPhone: appointment.customer_phone,
-              customerName: appointment.customer_name,
-              vehicleInfo: `${appointment.vehicle_year} ${appointment.vehicle_make} ${appointment.vehicle_model}`
-            }
-          });
-        }
-      }
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setUpdatingJob(null);
     }
   };
 
   const getStatusColor = (status: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       pending: "bg-yellow-500",
-      approved: "bg-blue-500",
       in_progress: "bg-purple-500",
       completed: "bg-green-500",
-      cancelled: "bg-red-500"
+      approved: "bg-blue-500"
     };
-    return colors[status as keyof typeof colors] || "bg-gray-500";
+    return colors[status] || "bg-gray-500";
   };
+
+  const getStatusActions = (job: AssignedJob) => {
+    switch (job.status) {
+      case 'pending':
+        return (
+          <Button 
+            onClick={() => updateJobStatus(job.id, 'in_progress')}
+            disabled={updatingJob === job.id}
+            className="w-full"
+          >
+            <Play className="w-4 h-4 mr-2" />
+            {updatingJob === job.id ? "Starting..." : "Start Job"}
+          </Button>
+        );
+      case 'in_progress':
+        return (
+          <Button 
+            onClick={() => updateJobStatus(job.id, 'completed')}
+            disabled={updatingJob === job.id}
+            className="w-full bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle className="w-4 h-4 mr-2" />
+            {updatingJob === job.id ? "Completing..." : "Mark Completed"}
+          </Button>
+        );
+      case 'completed':
+        return (
+          <div className="text-center p-3 bg-green-100 rounded-lg">
+            <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-1" />
+            <p className="text-sm text-green-800 font-medium">Waiting for Admin Approval</p>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const pendingJobs = jobs.filter(j => j.status === 'pending');
+  const inProgressJobs = jobs.filter(j => j.status === 'in_progress');
+  const completedJobs = jobs.filter(j => j.status === 'completed');
 
   if (!isMechanic) return null;
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">My Assigned Jobs</h1>
-          <p className="text-muted-foreground">Mechanic Dashboard</p>
+      <main className="flex-1 container mx-auto px-4 py-8 mt-16">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">My Jobs</h1>
+            <p className="text-muted-foreground">Mechanic Dashboard</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/totp-setup">
+                <Shield className="w-4 h-4 mr-2" />
+                Setup 2FA
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => user && fetchAssignedJobs(user.id)}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {loading ? (
           <p>Loading jobs...</p>
-        ) : appointments.length === 0 ? (
+        ) : jobs.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
+              <Car className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No jobs assigned yet</p>
+              <p className="text-sm text-muted-foreground mt-2">Jobs will appear here once admin assigns them to you.</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6">
-            {appointments.map((apt) => (
-              <Card key={apt.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-xl">
-                        {apt.vehicle_year} {apt.vehicle_make} {apt.vehicle_model}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">Customer: {apt.customer_name}</p>
-                    </div>
-                    <Badge className={getStatusColor(apt.job_status)}>
-                      {apt.job_status.replace("_", " ").toUpperCase()}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>{new Date(apt.appointment_date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span>{apt.appointment_time}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
-                      <span>{apt.customer_email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span>{apt.customer_phone}</span>
-                    </div>
-                  </div>
+          <div className="space-y-8">
+            {/* In Progress Jobs - Most Important */}
+            {inProgressJobs.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-purple-500" />
+                  In Progress ({inProgressJobs.length})
+                </h2>
+                <div className="grid gap-4">
+                  {inProgressJobs.map((job) => (
+                    <JobCard 
+                      key={job.id} 
+                      job={job} 
+                      getStatusColor={getStatusColor}
+                      getStatusActions={getStatusActions}
+                      jobNotes={jobNotes}
+                      setJobNotes={setJobNotes}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-                  {apt.vin && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Car className="w-4 h-4 text-muted-foreground" />
-                      <span>VIN: {apt.vin}</span>
-                    </div>
-                  )}
+            {/* Pending Jobs */}
+            {pendingJobs.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-yellow-500" />
+                  Pending ({pendingJobs.length})
+                </h2>
+                <div className="grid gap-4">
+                  {pendingJobs.map((job) => (
+                    <JobCard 
+                      key={job.id} 
+                      job={job} 
+                      getStatusColor={getStatusColor}
+                      getStatusActions={getStatusActions}
+                      jobNotes={jobNotes}
+                      setJobNotes={setJobNotes}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-                  {apt.street_address && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span>{apt.street_address}, {apt.city}, {apt.state}</span>
-                    </div>
-                  )}
-
-                  {apt.notes && (
-                    <div className="text-sm p-3 bg-muted rounded">
-                      <strong>Notes:</strong> {apt.notes}
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-4 pt-2">
-                    <Label className="text-sm font-medium">Update Status:</Label>
-                    <Select
-                      value={apt.job_status}
-                      onValueChange={(value) => updateJobStatus(apt.id, value)}
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {/* Completed Jobs */}
+            {completedJobs.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  Completed - Awaiting Approval ({completedJobs.length})
+                </h2>
+                <div className="grid gap-4">
+                  {completedJobs.map((job) => (
+                    <JobCard 
+                      key={job.id} 
+                      job={job} 
+                      getStatusColor={getStatusColor}
+                      getStatusActions={getStatusActions}
+                      jobNotes={jobNotes}
+                      setJobNotes={setJobNotes}
+                      readonly
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </main>
       <Footer />
     </div>
+  );
+};
+
+type JobCardProps = {
+  job: AssignedJob;
+  getStatusColor: (status: string) => string;
+  getStatusActions: (job: AssignedJob) => React.ReactNode;
+  jobNotes: Record<string, string>;
+  setJobNotes: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  readonly?: boolean;
+};
+
+const JobCard = ({ job, getStatusColor, getStatusActions, jobNotes, setJobNotes, readonly }: JobCardProps) => {
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-xl">{job.vehicle}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Customer: {job.customer_name}</p>
+          </div>
+          <Badge className={getStatusColor(job.status)}>
+            {job.status.replace("_", " ").toUpperCase()}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          {job.appointment_date && (
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <span>{new Date(job.appointment_date).toLocaleDateString()}</span>
+            </div>
+          )}
+          {job.customer_phone && (
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="w-4 h-4 text-muted-foreground" />
+              <span>{job.customer_phone}</span>
+            </div>
+          )}
+        </div>
+
+        {job.description && (
+          <div className="text-sm p-3 bg-muted rounded">
+            <strong>Service:</strong> {job.description}
+          </div>
+        )}
+
+        {!readonly && (
+          <div className="space-y-2">
+            <Label htmlFor={`notes-${job.id}`}>Job Notes</Label>
+            <Textarea
+              id={`notes-${job.id}`}
+              placeholder="Add notes about the work done..."
+              value={jobNotes[job.id] || ''}
+              onChange={(e) => setJobNotes(prev => ({ ...prev, [job.id]: e.target.value }))}
+              rows={3}
+            />
+          </div>
+        )}
+
+        {readonly && job.notes && (
+          <div className="text-sm p-3 bg-blue-50 rounded border border-blue-200">
+            <strong>Your Notes:</strong> {job.notes}
+          </div>
+        )}
+
+        {getStatusActions(job)}
+      </CardContent>
+    </Card>
   );
 };
 

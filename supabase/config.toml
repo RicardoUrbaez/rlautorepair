@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.tekmetric-endpoints]
 verify_jwt = false
+
+[functions.totp-verify]
+verify_jwt = false

@@ -97,6 +97,63 @@ export type Database = {
           },
         ]
       }
+      assigned_jobs: {
+        Row: {
+          appointment_date: string | null
+          approved_at: string | null
+          approved_by: string | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string | null
+          customer_name: string
+          customer_phone: string | null
+          description: string | null
+          id: string
+          notes: string | null
+          status: string
+          tekmetric_appointment_id: string | null
+          tekmetric_job_id: string | null
+          updated_at: string | null
+          vehicle: string
+        }
+        Insert: {
+          appointment_date?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tekmetric_appointment_id?: string | null
+          tekmetric_job_id?: string | null
+          updated_at?: string | null
+          vehicle: string
+        }
+        Update: {
+          appointment_date?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          tekmetric_appointment_id?: string | null
+          tekmetric_job_id?: string | null
+          updated_at?: string | null
+          vehicle?: string
+        }
+        Relationships: []
+      }
       inquiries: {
         Row: {
           created_at: string
@@ -326,6 +383,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      totp_secrets: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          secret: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          secret: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          secret?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
