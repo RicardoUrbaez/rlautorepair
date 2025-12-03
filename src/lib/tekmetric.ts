@@ -125,6 +125,7 @@ export async function createTekmetricCustomer(customer: {
 
 /**
  * Find existing customer or create new one in Tekmetric
+ * Searches by phone first (Tekmetric recommended), then email as fallback
  */
 export async function findOrCreateCustomer(params: {
   shopId: string | number;
@@ -137,24 +138,57 @@ export async function findOrCreateCustomer(params: {
   state?: string;
   zip?: string;
 }) {
+  // Clean phone number - remove all non-digits
+  const cleanPhone = params.phone.replace(/\D/g, '');
+  
+  // Step 1: Search by phone number (Tekmetric recommended method)
   try {
-    // First, try to find existing customer by email
-    const customers = await fetchTekmetricCustomers({ 
+    console.log('Searching Tekmetric customer by phone:', cleanPhone);
+    const phoneResults = await fetchTekmetricCustomers({ 
+      shopId: params.shopId.toString(),
+      phone: cleanPhone 
+    });
+    
+    if (phoneResults?.content?.length > 0) {
+      console.log('Found existing customer by phone:', phoneResults.content[0].id);
+      return { customer: phoneResults.content[0], created: false };
+    }
+  } catch (error) {
+    console.log('Phone search failed, trying email...');
+  }
+
+  // Step 2: Search by email as fallback
+  try {
+    console.log('Searching Tekmetric customer by email:', params.email);
+    const emailResults = await fetchTekmetricCustomers({ 
       shopId: params.shopId.toString(),
       email: params.email 
     });
     
-    if (customers?.content?.length > 0) {
-      console.log('Found existing customer:', customers.content[0].id);
-      return { customer: customers.content[0], created: false };
+    if (emailResults?.content?.length > 0) {
+      console.log('Found existing customer by email:', emailResults.content[0].id);
+      return { customer: emailResults.content[0], created: false };
     }
   } catch (error) {
-    console.log('No existing customer found, will create new one');
+    console.log('Email search failed, will create new customer');
   }
 
-  // Create new customer
-  const result = await createTekmetricCustomer(params);
+  // Step 3: Customer doesn't exist - create new one
+  console.log('Creating new Tekmetric customer:', params.firstName, params.lastName);
+  const result = await createTekmetricCustomer({
+    shopId: params.shopId,
+    firstName: params.firstName,
+    lastName: params.lastName,
+    email: params.email,
+    phone: cleanPhone,
+    address: params.address,
+    city: params.city,
+    state: params.state,
+    zip: params.zip,
+  });
+  
   if (result.success && result.data) {
+    console.log('Created new Tekmetric customer:', result.data.id);
     return { customer: result.data, created: true };
   }
   
