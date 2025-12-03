@@ -294,51 +294,23 @@ serve(async (req) => {
           errorJson = { message: errorText };
         }
 
-        // Handle 409 Conflict - customer already exists
-        // Tekmetric returns the existing customer data in the response
-        // IMPORTANT: Only use the existing customer if phone EXACTLY matches the input
+        // Handle 409 Conflict - customer already exists in Tekmetric
+        // Tekmetric matched this customer by email OR phone - USE that customer
+        // This is the authoritative match from Tekmetric's system
         if (response.status === 409 && errorJson?.data?.content?.length > 0) {
           const existingCustomer = errorJson.data.content[0];
-          console.log('409 Conflict - Tekmetric returned existing customer:', existingCustomer.id, existingCustomer.firstName, existingCustomer.lastName);
+          console.log('409 Conflict - Tekmetric found existing customer by email/phone');
+          console.log('Using existing customer:', existingCustomer.id, existingCustomer.firstName, existingCustomer.lastName);
           
-          // Check if the existing customer's phone matches the form input
-          const existingPhones = existingCustomer.phone || [];
-          const existingPhoneNormalized = existingPhones.map((p: any) => normalizePhone(p.number || p)).filter(Boolean);
-          const inputPhoneNormalized = normalizePhone(customerPhone);
-          
-          console.log('Comparing phones - Input:', inputPhoneNormalized, 'Existing:', existingPhoneNormalized);
-          
-          const phoneMatches = inputPhoneNormalized && existingPhoneNormalized.includes(inputPhoneNormalized);
-          
-          if (phoneMatches) {
-            // Phone matches - this is likely the same person, use existing customer
-            console.log('Phone MATCHES - using existing customer:', existingCustomer.id);
-            return new Response(JSON.stringify({
-              success: true,
-              data: existingCustomer,
-              message: 'Customer already exists with matching phone, returning existing record',
-              existed: true,
-            }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          } else {
-            // Phone does NOT match - this is a DIFFERENT person trying to use an existing email
-            console.error('Phone MISMATCH - existing customer has different phone. Cannot create.');
-            console.error('Input phone:', inputPhoneNormalized, 'Existing phones:', existingPhoneNormalized);
-            // Return 200 with success:false so client can read the error message
-            // (non-200 status codes cause supabase.functions.invoke to throw without body)
-            return new Response(JSON.stringify({
-              success: false,
-              emailConflict: true,
-              error: {
-                message: 'This email is already registered to another customer. Please use a different email address.',
-                existingCustomerName: `${existingCustomer.firstName} ${existingCustomer.lastName}`,
-              },
-            }), {
-              status: 200, // Return 200 so client receives the body
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
+          // Return the existing customer - Tekmetric has confirmed this email/phone belongs to them
+          return new Response(JSON.stringify({
+            success: true,
+            data: existingCustomer,
+            message: 'Customer already exists in Tekmetric, using existing record',
+            existed: true,
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         return new Response(JSON.stringify({
