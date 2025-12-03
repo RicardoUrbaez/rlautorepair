@@ -10,20 +10,22 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import rlLogo from "@/assets/rl-logo.png";
-import { Building2, Users, Wrench } from "lucide-react";
+import { Building2, Users, Wrench, Shield, KeyRound } from "lucide-react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
   const [userType, setUserType] = useState<"customer" | "mechanic">("customer");
+  const [showTotpStep, setShowTotpStep] = useState(false);
+  const [pendingUser, setPendingUser] = useState<{ id: string; secret: string } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/");
@@ -31,13 +33,13 @@ const Auth = () => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
+      if (session && !showTotpStep) {
         navigate("/");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, showTotpStep]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,35 +54,26 @@ const Auth = () => {
         
         if (error) throw error;
 
-        // Check user roles and redirect accordingly
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id);
-
-        const roles = roleData?.map(r => r.role) || [];
-
-        // Redirect based on role priority: admin > mechanic > customer
-        if (roles.includes("admin")) {
-          navigate("/admin-dashboard");
-        } else if (roles.includes("mechanic") && userType === "mechanic") {
-          navigate("/mechanic-dashboard");
-        } else if (roles.includes("mechanic") && userType !== "mechanic") {
-          await supabase.auth.signOut();
-          throw new Error("Please use the Mechanic login tab.");
-        } else if (userType === "mechanic") {
-          await supabase.auth.signOut();
-          throw new Error("You don't have mechanic access. Please contact admin.");
-        } else {
-          navigate("/customer-dashboard");
-        }
-        
-        toast({
-          title: "Success",
-          description: "Logged in successfully!",
+        // Check if user has TOTP enabled
+        const { data: totpData } = await supabase.functions.invoke('totp-verify', {
+          body: { action: 'check', userId: data.user.id }
         });
+
+        if (totpData?.hasTotp) {
+          // User has TOTP enabled, show verification step
+          setPendingUser({ id: data.user.id, secret: totpData.secret });
+          setShowTotpStep(true);
+          // Sign out temporarily until TOTP is verified
+          await supabase.auth.signOut();
+          toast({
+            title: "Enter Verification Code",
+            description: "Please enter the 6-digit code from your authenticator app.",
+          });
+        } else {
+          // No TOTP, proceed with normal login
+          await handleSuccessfulLogin(data.user.id);
+        }
       } else {
-        // Only allow signup for customers
         if (userType === "mechanic") {
           throw new Error("Mechanic accounts must be created by an administrator.");
         }
@@ -112,11 +105,80 @@ const Auth = () => {
     }
   };
 
+  const handleTotpVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingUser) return;
+    
+    setLoading(true);
+    try {
+      // Verify TOTP code
+      const { data: verifyResult } = await supabase.functions.invoke('totp-verify', {
+        body: {
+          action: 'verify',
+          userId: pendingUser.id,
+          token: totpCode,
+          secret: pendingUser.secret,
+        }
+      });
+
+      if (!verifyResult?.valid) {
+        throw new Error("Invalid verification code. Please try again.");
+      }
+
+      // TOTP verified, sign back in
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      await handleSuccessfulLogin(data.user.id);
+      
+    } catch (error: any) {
+      toast({
+        title: "Verification Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSuccessfulLogin = async (userId: string) => {
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    const roles = roleData?.map(r => r.role) || [];
+
+    if (roles.includes("admin")) {
+      navigate("/admin-dashboard");
+    } else if (roles.includes("mechanic") && userType === "mechanic") {
+      navigate("/mechanic-dashboard");
+    } else if (roles.includes("mechanic") && userType !== "mechanic") {
+      await supabase.auth.signOut();
+      throw new Error("Please use the Mechanic login tab.");
+    } else if (userType === "mechanic") {
+      await supabase.auth.signOut();
+      throw new Error("You don't have mechanic access. Please contact admin.");
+    } else {
+      navigate("/customer-dashboard");
+    }
+    
+    toast({
+      title: "Success",
+      description: "Logged in successfully!",
+    });
+  };
+
   const handleOktaSSO = async () => {
     setSsoLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithSSO({
-        domain: 'rlautorepair.okta.com', // Replace with your Okta domain
+        domain: 'rlautorepair.okta.com',
         options: {
           redirectTo: `${window.location.origin}/`
         }
@@ -136,6 +198,58 @@ const Auth = () => {
       setSsoLoading(false);
     }
   };
+
+  const cancelTotpVerification = () => {
+    setShowTotpStep(false);
+    setPendingUser(null);
+    setTotpCode("");
+    setPassword("");
+  };
+
+  if (showTotpStep) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4 py-12 bg-muted">
+          <Card className="w-full max-w-md">
+            <CardHeader className="space-y-4 text-center">
+              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <Shield className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Two-Factor Authentication</CardTitle>
+              <CardDescription>
+                Enter the 6-digit code from your Google Authenticator app
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleTotpVerification} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="totp">Verification Code</Label>
+                  <Input
+                    id="totp"
+                    type="text"
+                    placeholder="000000"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="text-center text-2xl tracking-widest"
+                    maxLength={6}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || totpCode.length !== 6}>
+                  {loading ? "Verifying..." : "Verify & Sign In"}
+                </Button>
+                <Button type="button" variant="outline" className="w-full" onClick={cancelTotpVerification}>
+                  Cancel
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
