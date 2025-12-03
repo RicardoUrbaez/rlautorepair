@@ -295,22 +295,51 @@ serve(async (req) => {
         }
 
         // Handle 409 Conflict - customer already exists in Tekmetric
-        // Tekmetric matched this customer by email OR phone - USE that customer
-        // This is the authoritative match from Tekmetric's system
+        // ONLY use existing customer if their phone matches form input
         if (response.status === 409 && errorJson?.data?.content?.length > 0) {
           const existingCustomer = errorJson.data.content[0];
-          console.log('409 Conflict - Tekmetric found existing customer by email/phone');
-          console.log('Using existing customer:', existingCustomer.id, existingCustomer.firstName, existingCustomer.lastName);
+          console.log('409 Conflict - Tekmetric found existing customer:', existingCustomer.id, existingCustomer.firstName, existingCustomer.lastName);
           
-          // Return the existing customer - Tekmetric has confirmed this email/phone belongs to them
-          return new Response(JSON.stringify({
-            success: true,
-            data: existingCustomer,
-            message: 'Customer already exists in Tekmetric, using existing record',
-            existed: true,
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          // Get existing customer's phone numbers (normalized)
+          const existingPhones = existingCustomer.phone || [];
+          const existingPhoneNormalized = existingPhones.map((p: any) => {
+            const num = p.number || (typeof p === 'string' ? p : '');
+            return normalizePhone(num);
+          }).filter(Boolean);
+          
+          console.log('Form phone (normalized):', customerPhone);
+          console.log('Existing customer phones:', existingPhoneNormalized);
+          
+          // Check if form phone matches any existing phone
+          const phoneMatches = customerPhone && existingPhoneNormalized.includes(customerPhone);
+          
+          if (phoneMatches) {
+            // Phone matches - same person, use existing customer
+            console.log('✅ Phone MATCHES - using existing customer');
+            return new Response(JSON.stringify({
+              success: true,
+              data: existingCustomer,
+              message: 'Customer already exists with matching phone',
+              existed: true,
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } else {
+            // Phone does NOT match - different person using same email
+            console.error('❌ Phone MISMATCH - cannot use existing customer');
+            console.error('Form input:', { firstName: params.firstName, lastName: params.lastName, phone: customerPhone, email: customerEmail });
+            console.error('Existing customer:', { name: existingCustomer.firstName + ' ' + existingCustomer.lastName, phones: existingPhoneNormalized });
+            
+            return new Response(JSON.stringify({
+              success: false,
+              emailConflict: true,
+              error: {
+                message: `This email (${customerEmail}) is already registered to another customer (${existingCustomer.firstName} ${existingCustomer.lastName}). Please use a different email address.`,
+              },
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
         }
 
         return new Response(JSON.stringify({
