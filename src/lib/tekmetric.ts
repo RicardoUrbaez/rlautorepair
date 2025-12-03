@@ -116,6 +116,13 @@ export async function createTekmetricCustomer(customer: {
     });
 
     if (error) throw error;
+    
+    // Check for email conflict (edge function returns 200 with emailConflict flag)
+    if (data?.emailConflict) {
+      const errorMessage = data.error?.message || 'This email is already registered to another customer.';
+      throw new Error(errorMessage);
+    }
+    
     return data;
   } catch (error) {
     console.error('Error creating Tekmetric customer:', error);
