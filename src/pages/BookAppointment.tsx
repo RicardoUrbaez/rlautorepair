@@ -225,13 +225,17 @@ const BookAppointment = () => {
       console.log('Tekmetric customer ready:', customer.id);
 
       // Create appointment in Tekmetric for first service
+      // Title format: "CUSTOMER NAME's YEAR MAKE MODEL" (like Tekmetric expects)
+      const customerFullName = values.customer_name.toUpperCase();
+      const vehicleInfo = `${values.vehicle_year} ${values.vehicle_make} ${values.vehicle_model}`;
+      
       const appointmentData = {
         customerId: customer.id,
         shopId: SHOP_ID,
         scheduledDate: values.appointment_date,
         scheduledTime: values.appointment_time + ':00',
-        title: `${values.vehicle_year} ${values.vehicle_make} ${values.vehicle_model}`,
-        description: values.notes || `Service appointment for ${values.vehicle_make} ${values.vehicle_model}`,
+        title: `${customerFullName}'s ${vehicleInfo}`,
+        description: values.notes || `Check vehicle - ${vehicleInfo}`,
         startTime: values.appointment_time + ':00',
         endTime: calculateEndTime(values.appointment_time),
       };
