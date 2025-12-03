@@ -204,30 +204,36 @@ const BookAppointment = () => {
       
       const SHOP_ID = "13739"; // RL Auto Repair production shop ID
       
-      // Split customer name
+      // ALWAYS use EXACT form input - NO FALLBACKS
+      // Split customer name from form input
       const nameParts = values.customer_name.trim().split(' ');
-      const firstName = nameParts[0] || 'Customer';
-      const lastName = nameParts.slice(1).join(' ') || 'Name';
+      const firstName = nameParts[0]; // Exact first word from form
+      const lastName = nameParts.slice(1).join(' '); // Rest of name from form (can be empty)
 
-      // Find or create customer in Tekmetric
-      const { customer } = await findOrCreateCustomer({
+      console.log('=== TEKMETRIC SYNC - USING EXACT FORM INPUT ===');
+      console.log('Form firstName:', firstName);
+      console.log('Form lastName:', lastName);
+      console.log('Form phone:', values.customer_phone);
+      console.log('Form email:', values.customer_email);
+
+      // Find or create customer using ONLY form input values
+      const { customer, created } = await findOrCreateCustomer({
         shopId: SHOP_ID,
-        email: values.customer_email,
-        phone: values.customer_phone,
-        firstName,
-        lastName,
+        email: values.customer_email, // EXACT form input
+        phone: values.customer_phone, // EXACT form input
+        firstName, // EXACT form input
+        lastName, // EXACT form input
         address: values.street_address,
         city: values.city,
         state: values.state,
         zip: values.zip_code,
       });
 
-      console.log('Tekmetric customer ready:', customer.id);
+      console.log(`Tekmetric customer ${created ? 'CREATED' : 'FOUND'}:`, customer.id, customer.firstName, customer.lastName);
 
-      // Create appointment in Tekmetric for first service
-      // Title format: "CUSTOMER NAME's YEAR MAKE MODEL" (like Tekmetric expects)
-      const customerFullName = values.customer_name.toUpperCase();
-      const vehicleInfo = `${values.vehicle_year} ${values.vehicle_make} ${values.vehicle_model}`;
+      // Appointment title uses EXACT form input
+      const customerFullName = values.customer_name.toUpperCase(); // EXACT from form
+      const vehicleInfo = `${values.vehicle_year} ${values.vehicle_make} ${values.vehicle_model}`; // EXACT from form
       
       // Calculate start and end times with full ISO datetime (Tekmetric requires timezone offset)
       const { startTimeISO, endTimeISO } = calculateAppointmentTimes(

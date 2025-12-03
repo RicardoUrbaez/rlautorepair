@@ -157,17 +157,40 @@ serve(async (req) => {
         endTime = `${endDate}T${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00${timezone}`;
       }
       
-      console.log('Formatted startTime:', startTime);
-      console.log('Formatted endTime:', endTime);
+      console.log('Final startTime:', startTime);
+      console.log('Final endTime:', endTime);
+      
+      // ALWAYS use EXACT values from form input - NO FALLBACKS
+      // title comes from form: "CUSTOMER NAME's YEAR MAKE MODEL"
+      // description comes from form: notes or vehicle check info
+      const appointmentTitle = params.title || params.description; // Use form title, NO fallback
+      const appointmentDescription = params.description || '';
+      
+      if (!appointmentTitle) {
+        console.error('MISSING title - cannot create appointment without title from form');
+        return new Response(JSON.stringify({
+          success: false,
+          error: { message: 'title is required - must be provided from form input' },
+          status: 400,
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       
       const tekmetricPayload: Record<string, unknown> = {
-        customerId: parseInt(String(params.customerId)),
-        shopId: parseInt(String(params.shopId)),
+        customerId: parseInt(String(params.customerId)), // EXACT from customer lookup
+        shopId: parseInt(String(params.shopId)), // EXACT from form/config
         startTime: startTime,
         endTime: endTime,
-        title: params.description || params.title || 'Service Appointment',
-        description: params.description || '',
+        title: appointmentTitle, // EXACT from form
+        description: appointmentDescription, // EXACT from form
       };
+      
+      console.log('=== APPOINTMENT USING EXACT FORM VALUES ===');
+      console.log('customerId:', params.customerId);
+      console.log('title:', appointmentTitle);
+      console.log('description:', appointmentDescription);
       
       if (params.vehicleId) {
         tekmetricPayload.vehicleId = parseInt(String(params.vehicleId));
