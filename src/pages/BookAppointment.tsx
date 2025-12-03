@@ -229,6 +229,12 @@ const BookAppointment = () => {
       const customerFullName = values.customer_name.toUpperCase();
       const vehicleInfo = `${values.vehicle_year} ${values.vehicle_make} ${values.vehicle_model}`;
       
+      // Calculate start and end times with full ISO datetime (Tekmetric requires timezone offset)
+      const { startTimeISO, endTimeISO } = calculateAppointmentTimes(
+        values.appointment_date,
+        values.appointment_time
+      );
+
       const appointmentData = {
         customerId: customer.id,
         shopId: SHOP_ID,
@@ -236,8 +242,8 @@ const BookAppointment = () => {
         scheduledTime: values.appointment_time + ':00',
         title: `${customerFullName}'s ${vehicleInfo}`,
         description: values.notes || `Check vehicle - ${vehicleInfo}`,
-        startTime: values.appointment_time + ':00',
-        endTime: calculateEndTime(values.appointment_time),
+        startTime: startTimeISO,
+        endTime: endTimeISO,
       };
 
       const result = await createTekmetricAppointment(appointmentData);
@@ -251,10 +257,30 @@ const BookAppointment = () => {
     }
   };
 
-  const calculateEndTime = (startTime: string): string => {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const endHour = (hours + 1) % 24;
-    return `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+  // Calculate full ISO datetime strings with timezone for Tekmetric API
+  const calculateAppointmentTimes = (date: string, time: string): { startTimeISO: string; endTimeISO: string } => {
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    // Start time is straightforward
+    const startTimeISO = `${date}T${time.padStart(5, '0')}:00-05:00`;
+    
+    // End time is 1 hour later
+    let endDate = date;
+    let endHour = hours + 1;
+    
+    // Handle midnight crossing - end time goes to next day
+    if (endHour >= 24) {
+      endHour = endHour - 24;
+      // Calculate next day
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      endDate = nextDay.toISOString().split('T')[0];
+    }
+    
+    const endTimeStr = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    const endTimeISO = `${endDate}T${endTimeStr}:00-05:00`;
+    
+    return { startTimeISO, endTimeISO };
   };
 
   const today = new Date().toISOString().split("T")[0];
