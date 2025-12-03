@@ -190,6 +190,21 @@ serve(async (req) => {
           errorJson = { message: errorText };
         }
 
+        // Handle 409 Conflict - customer already exists
+        // Tekmetric helpfully returns the existing customer data in the response
+        if (response.status === 409 && errorJson?.data?.content?.length > 0) {
+          const existingCustomer = errorJson.data.content[0];
+          console.log('Customer already exists (409), returning existing:', existingCustomer.id);
+          return new Response(JSON.stringify({
+            success: true,
+            data: existingCustomer,
+            message: 'Customer already exists, returning existing record',
+            existed: true,
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
         return new Response(JSON.stringify({
           success: false,
           error: errorJson,
