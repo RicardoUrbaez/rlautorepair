@@ -123,21 +123,39 @@ serve(async (req) => {
       // Create appointment (blocked in TEST MODE - checked above)
       console.log('--- Creating Appointment ---');
       
-      // Format time with timezone - Tekmetric requires ZonedDateTime format
-      // Assuming Eastern timezone (EST/EDT) for RL Auto Repair
-      const timezone = '-05:00'; // EST offset (adjust to -04:00 for EDT during daylight saving)
+      const timezone = '-05:00'; // EST offset
       
-      // Ensure time has seconds (HH:mm:ss format)
-      const timeParts = String(params.scheduledTime).split(':');
-      const formattedTime = `${timeParts[0].padStart(2, '0')}:${(timeParts[1] || '00').padStart(2, '0')}:${(timeParts[2] || '00').padStart(2, '0')}`;
+      let startTime: string;
+      let endTime: string;
       
-      const startTime = `${params.scheduledDate}T${formattedTime}${timezone}`;
-      
-      // Calculate end time (1 hour later)
-      const hours = parseInt(timeParts[0]) || 0;
-      const minutes = parseInt(timeParts[1]) || 0;
-      const endHours = (hours + 1) % 24;
-      const endTime = `${params.scheduledDate}T${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00${timezone}`;
+      // Use provided startTime/endTime if they include full ISO datetime, otherwise calculate
+      if (params.startTime && String(params.startTime).includes('T')) {
+        startTime = String(params.startTime);
+        endTime = String(params.endTime);
+        console.log('Using provided ISO datetime values');
+      } else {
+        // Fallback: calculate from scheduledTime
+        const timeParts = String(params.scheduledTime).split(':');
+        const formattedTime = `${timeParts[0].padStart(2, '0')}:${(timeParts[1] || '00').padStart(2, '0')}:${(timeParts[2] || '00').padStart(2, '0')}`;
+        
+        startTime = `${params.scheduledDate}T${formattedTime}${timezone}`;
+        
+        // Calculate end time (1 hour later) - handle midnight crossing
+        const hours = parseInt(timeParts[0]) || 0;
+        const minutes = parseInt(timeParts[1]) || 0;
+        let endHours = hours + 1;
+        let endDate = String(params.scheduledDate);
+        
+        if (endHours >= 24) {
+          endHours = endHours - 24;
+          // Calculate next day
+          const dateObj = new Date(endDate);
+          dateObj.setDate(dateObj.getDate() + 1);
+          endDate = dateObj.toISOString().split('T')[0];
+        }
+        
+        endTime = `${endDate}T${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00${timezone}`;
+      }
       
       console.log('Formatted startTime:', startTime);
       console.log('Formatted endTime:', endTime);
