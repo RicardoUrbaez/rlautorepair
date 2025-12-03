@@ -296,17 +296,47 @@ serve(async (req) => {
 
         // Handle 409 Conflict - customer already exists
         // Tekmetric returns the existing customer data in the response
+        // IMPORTANT: Only use the existing customer if phone EXACTLY matches the input
         if (response.status === 409 && errorJson?.data?.content?.length > 0) {
           const existingCustomer = errorJson.data.content[0];
-          console.log('Customer already exists (409), returning existing:', existingCustomer.id);
-          return new Response(JSON.stringify({
-            success: true,
-            data: existingCustomer,
-            message: 'Customer already exists, returning existing record',
-            existed: true,
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          console.log('409 Conflict - Tekmetric returned existing customer:', existingCustomer.id, existingCustomer.firstName, existingCustomer.lastName);
+          
+          // Check if the existing customer's phone matches the form input
+          const existingPhones = existingCustomer.phone || [];
+          const existingPhoneNormalized = existingPhones.map((p: any) => normalizePhone(p.number || p)).filter(Boolean);
+          const inputPhoneNormalized = normalizePhone(customerPhone);
+          
+          console.log('Comparing phones - Input:', inputPhoneNormalized, 'Existing:', existingPhoneNormalized);
+          
+          const phoneMatches = inputPhoneNormalized && existingPhoneNormalized.includes(inputPhoneNormalized);
+          
+          if (phoneMatches) {
+            // Phone matches - this is likely the same person, use existing customer
+            console.log('Phone MATCHES - using existing customer:', existingCustomer.id);
+            return new Response(JSON.stringify({
+              success: true,
+              data: existingCustomer,
+              message: 'Customer already exists with matching phone, returning existing record',
+              existed: true,
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } else {
+            // Phone does NOT match - this is a DIFFERENT person trying to use an existing email
+            console.error('Phone MISMATCH - existing customer has different phone. Cannot create.');
+            console.error('Input phone:', inputPhoneNormalized, 'Existing phones:', existingPhoneNormalized);
+            return new Response(JSON.stringify({
+              success: false,
+              error: {
+                message: 'This email is already registered to another customer. Please use a different email address.',
+                existingCustomerName: `${existingCustomer.firstName} ${existingCustomer.lastName}`,
+              },
+              status: 409,
+            }), {
+              status: 409,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
         }
 
         return new Response(JSON.stringify({

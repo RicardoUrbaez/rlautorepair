@@ -231,8 +231,8 @@ const BookAppointment = () => {
 
       console.log(`Tekmetric customer ${created ? 'CREATED' : 'FOUND'}:`, customer.id, customer.firstName, customer.lastName);
 
-      // Appointment title uses EXACT form input
-      const customerFullName = values.customer_name.toUpperCase(); // EXACT from form
+      // Appointment title uses EXACT form input - NO UPPERCASE CONVERSION
+      const customerFullName = values.customer_name.trim(); // EXACT from form, preserve case
       const vehicleInfo = `${values.vehicle_year} ${values.vehicle_make} ${values.vehicle_model}`; // EXACT from form
       
       // Calculate start and end times with full ISO datetime (Tekmetric requires timezone offset)
