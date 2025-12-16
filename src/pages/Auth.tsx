@@ -147,31 +147,12 @@ const Auth = () => {
   };
 
   const handleSuccessfulLogin = async (userId: string) => {
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-
-    const roles = roleData?.map(r => r.role) || [];
-
-    if (roles.includes("admin")) {
-      navigate("/admin-dashboard");
-    } else if (roles.includes("mechanic") && userType === "mechanic") {
-      navigate("/mechanic-dashboard");
-    } else if (roles.includes("mechanic") && userType !== "mechanic") {
-      await supabase.auth.signOut();
-      throw new Error("Please use the Mechanic login tab.");
-    } else if (userType === "mechanic") {
-      await supabase.auth.signOut();
-      throw new Error("You don't have mechanic access. Please contact admin.");
-    } else {
-      navigate("/customer-dashboard");
-    }
-    
     toast({
       title: "Success",
       description: "Logged in successfully!",
     });
+    // Navigate to home - user can access dashboards from navbar
+    navigate("/");
   };
 
   const handleOktaSSO = async () => {
